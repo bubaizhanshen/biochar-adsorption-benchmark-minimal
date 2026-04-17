@@ -4,6 +4,4 @@ scikit-learn
 xgboost
 lightgbm
 shap
-matplotlib
-seaborn
 openpyxl

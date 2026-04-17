@@ -117,7 +117,10 @@ XGB_CANDIDATES = (
     CandidateModel(
         family="XGB",
         name="XGB_400_6_01_09_09",
-        params_text="n_estimators=400, max_depth=6, learning_rate=0.1, subsample=0.9, colsample_bytree=0.9",
+        params_text=(
+            "n_estimators=400, max_depth=6, learning_rate=0.1, "
+            "subsample=0.9, colsample_bytree=0.9"
+        ),
         builder=lambda n_jobs: XGBRegressor(
             n_estimators=400,
             max_depth=6,

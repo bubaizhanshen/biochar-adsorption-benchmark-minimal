@@ -11,8 +11,19 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import make_scorer, mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import GridSearchCV, GroupKFold, KFold, LeaveOneGroupOut, ShuffleSplit
+from sklearn.metrics import (
+    make_scorer,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
+from sklearn.model_selection import (
+    GridSearchCV,
+    GroupKFold,
+    KFold,
+    LeaveOneGroupOut,
+    ShuffleSplit,
+)
 from xgboost import XGBRegressor
 
 
@@ -102,7 +113,12 @@ class DatasetConfig:
 def build_pfas_name_map() -> dict[str, str]:
     mapping_df = pd.read_csv(DATA_DIR / "pfas_name_map.csv")
     mapping_df["Common_Name"] = mapping_df["Common_Name"].astype(str).str.strip()
-    mapping_df["SMILES"] = mapping_df["SMILES"].astype(str).str.replace("\xa0", "", regex=False).str.strip()
+    mapping_df["SMILES"] = (
+        mapping_df["SMILES"]
+        .astype(str)
+        .str.replace("\xa0", "", regex=False)
+        .str.strip()
+    )
     mapping = dict(zip(mapping_df["Common_Name"], mapping_df["SMILES"]))
     expected = {
         "PFOA",
@@ -238,9 +254,27 @@ DATASETS = OrderedDict(
                 "PFPeA": PFAS_MAP["PFPeA"],
                 "PFNA": PFAS_MAP["PFNA"],
             },
-            bp_cols=("C", "Ash", "H/C", "O/C", "(O+N)/C", "Surface area", "Average pore size", "Pore volume"),
+            bp_cols=(
+                "C",
+                "Ash",
+                "H/C",
+                "O/C",
+                "(O+N)/C",
+                "Surface area",
+                "Average pore size",
+                "Pore volume",
+            ),
             pc_cols=("Pyrolysis temperature", "Pyrolysis time", "Heating rated"),
-            ac_cols=("Solution pH", "Adsorption time", "Adsorption temperature", "S/L", "Initial concentration", "CaCl2", "NaCl", "HA"),
+            ac_cols=(
+                "Solution pH",
+                "Adsorption time",
+                "Adsorption temperature",
+                "S/L",
+                "Initial concentration",
+                "CaCl2",
+                "NaCl",
+                "HA",
+            ),
         ),
     }
 )
@@ -398,13 +432,21 @@ def is_feature_set_applicable(cfg: DatasetConfig, feature_set: str) -> tuple[boo
         return False, "Redundant for this dataset; equivalent to Full."
     canonical = CANONICAL_FEATURE_SET_BY_CATEGORY.get(actual)
     if canonical is None:
-        return False, "No canonical feature-set label found for dataset-specific category combination."
+        return (
+            False,
+            "No canonical feature-set label found for dataset-specific "
+            "category combination.",
+        )
     if canonical != feature_set:
         return False, f"Redundant for this dataset; equivalent to {canonical}."
     return True, None
 
 
-def prepare_task_subset(cfg: DatasetConfig, task_key: str, feature_set: str) -> tuple[pd.DataFrame, list[str]]:
+def prepare_task_subset(
+    cfg: DatasetConfig,
+    task_key: str,
+    feature_set: str,
+) -> tuple[pd.DataFrame, list[str]]:
     df = pd.read_excel(DATA_DIR / cfg.file).copy()
     df["task_norm"] = df[cfg.task_col].map(normalize_text)
     task_norm = normalize_text(task_key)
@@ -504,7 +546,9 @@ def fit_best_search(
             winner_spec = spec
             continue
         better_r2 = row["best_cv_r2"] > coarse_best["best_cv_r2"]
-        tie_break = np.isclose(row["best_cv_r2"], coarse_best["best_cv_r2"]) and row["best_cv_rmse"] < coarse_best["best_cv_rmse"]
+        tie_break = np.isclose(
+            row["best_cv_r2"], coarse_best["best_cv_r2"]
+        ) and row["best_cv_rmse"] < coarse_best["best_cv_rmse"]
         if better_r2 or tie_break:
             coarse_best = row
             winner_spec = spec
@@ -670,7 +714,12 @@ def build_wide_tables(summary_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
     lobo = summary_df[summary_df["split_kind"] == "LOBO"].copy()
 
     rs_r2 = (
-        rs.pivot_table(index=["dataset", "contaminant_display"], columns="feature_set", values="mean_r2", aggfunc="first")
+        rs.pivot_table(
+            index=["dataset", "contaminant_display"],
+            columns="feature_set",
+            values="mean_r2",
+            aggfunc="first",
+        )
         .rename(
             columns={
                 "Full": "R2_RS_Full",
@@ -685,7 +734,17 @@ def build_wide_tables(summary_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
         .reset_index()
     )
     lobo_full = (
-        lobo[lobo["feature_set"] == "Full"][["dataset", "contaminant_display", "mean_r2", "mean_mae", "mean_rmse", "final_selected_model", "final_selected_params"]]
+        lobo[lobo["feature_set"] == "Full"][
+            [
+                "dataset",
+                "contaminant_display",
+                "mean_r2",
+                "mean_mae",
+                "mean_rmse",
+                "final_selected_model",
+                "final_selected_params",
+            ]
+        ]
         .rename(
             columns={
                 "mean_r2": "R2_LOBO_Full",
@@ -698,14 +757,23 @@ def build_wide_tables(summary_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
     )
 
     main_table = order_df.merge(rs_r2, on=["dataset", "contaminant_display"], how="left")
-    main_table = main_table.merge(lobo_full[["dataset", "contaminant_display", "R2_LOBO_Full"]], on=["dataset", "contaminant_display"], how="left")
+    main_table = main_table.merge(
+        lobo_full[["dataset", "contaminant_display", "R2_LOBO_Full"]],
+        on=["dataset", "contaminant_display"],
+        how="left",
+    )
 
     rs_metrics = rs.copy()
     rs_metrics["metric_key"] = rs_metrics["feature_set"].str.replace("+", "_", regex=False)
     rs_metrics_wide_parts = []
     for metric_col, prefix in [("mean_r2", "R2_RS"), ("mean_mae", "MAE_RS"), ("mean_rmse", "RMSE_RS")]:
         part = (
-            rs_metrics.pivot_table(index=["dataset", "contaminant_display"], columns="feature_set", values=metric_col, aggfunc="first")
+            rs_metrics.pivot_table(
+                index=["dataset", "contaminant_display"],
+                columns="feature_set",
+                values=metric_col,
+                aggfunc="first",
+            )
             .rename(
                 columns={
                     "Full": f"{prefix}_Full",
@@ -723,7 +791,11 @@ def build_wide_tables(summary_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFr
 
     rs_metrics_wide = order_df.copy()
     for part in rs_metrics_wide_parts:
-        rs_metrics_wide = rs_metrics_wide.merge(part, on=["dataset", "contaminant_display"], how="left")
+        rs_metrics_wide = rs_metrics_wide.merge(
+            part,
+            on=["dataset", "contaminant_display"],
+            how="left",
+        )
 
     lobo_metrics_wide = order_df.merge(lobo_full, on=["dataset", "contaminant_display"], how="left")
     return main_table, rs_metrics_wide, lobo_metrics_wide
@@ -762,15 +834,27 @@ def write_outputs(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run a unified grid-search benchmark for the 21 manuscript pollutants.")
+    parser = argparse.ArgumentParser(
+        description="Run a unified grid-search benchmark for the 21 manuscript pollutants."
+    )
     parser.add_argument("--rs-repeats", type=int, default=5)
     parser.add_argument("--n-jobs", type=int, default=4)
     parser.add_argument("--max-tasks", type=int, default=None)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT_DIR)
     parser.add_argument("--dataset-filter", nargs="*", default=None)
-    parser.add_argument("--split-filter", nargs="*", default=None, choices=["RS", "LOBO"])
+    parser.add_argument(
+        "--split-filter",
+        nargs="*",
+        default=None,
+        choices=["RS", "LOBO"],
+    )
     parser.add_argument("--task-filter", nargs="*", default=None)
-    parser.add_argument("--feature-filter", nargs="*", default=None, choices=list(FEATURE_SET_BUILDERS.keys()))
+    parser.add_argument(
+        "--feature-filter",
+        nargs="*",
+        default=None,
+        choices=list(FEATURE_SET_BUILDERS.keys()),
+    )
     args = parser.parse_args()
 
     manifest_df = build_task_manifest()
@@ -814,7 +898,11 @@ def main() -> None:
                             }
                         )
                         continue
-                    frame, feature_cols = prepare_task_subset(cfg, manifest_row["task_key"], feature_set)
+                    frame, feature_cols = prepare_task_subset(
+                        cfg,
+                        manifest_row["task_key"],
+                        feature_set,
+                    )
                     if split_kind == "LOBO" and frame["__group__"].astype(str).nunique() < 2:
                         raise RuntimeError("Fewer than two LOBO groups remain after dropna.")
                     fold_df, candidate_df = evaluate_outer_loop(
@@ -858,7 +946,13 @@ def main() -> None:
                         }
                     )
 
-    summary_df = pd.DataFrame(summary_rows).sort_values(["dataset", "contaminant_display", "split_kind", "feature_set"]).reset_index(drop=True)
+    summary_df = (
+        pd.DataFrame(summary_rows)
+        .sort_values(
+            ["dataset", "contaminant_display", "split_kind", "feature_set"]
+        )
+        .reset_index(drop=True)
+    )
     fold_df = pd.concat(fold_frames, ignore_index=True) if fold_frames else pd.DataFrame()
     candidate_df = pd.concat(candidate_frames, ignore_index=True) if candidate_frames else pd.DataFrame()
     skipped_df = pd.DataFrame(

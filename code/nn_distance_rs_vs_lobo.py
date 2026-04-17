@@ -4,8 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import LeaveOneGroupOut, ShuffleSplit
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
@@ -110,7 +108,9 @@ def select_feature_columns(df: pd.DataFrame, target_col: str) -> list[str]:
     return cols
 
 
-def nearest_neighbor_distances(train_x: np.ndarray, test_x: np.ndarray) -> np.ndarray:
+def nearest_neighbor_distances(
+    train_x: np.ndarray, test_x: np.ndarray
+) -> np.ndarray:
     model = NearestNeighbors(n_neighbors=1, metric="euclidean")
     model.fit(train_x)
     distances, _ = model.kneighbors(test_x)
@@ -118,7 +118,6 @@ def nearest_neighbor_distances(train_x: np.ndarray, test_x: np.ndarray) -> np.nd
 
 
 def main() -> None:
-    sns.set_style("whitegrid")
     raw_records: list[dict[str, object]] = []
     task_records: list[dict[str, object]] = []
 
@@ -158,18 +157,20 @@ def main() -> None:
             groups_arr = sub["__group__"].to_numpy()
 
             task_records.append(
-                    {
-                        "dataset": cfg["name"],
-                        "dataset_label": cfg["paper_label"],
-                        "pollutant": pollutant,
-                        "samples": len(sub),
+                {
+                    "dataset": cfg["name"],
+                    "dataset_label": cfg["paper_label"],
+                    "pollutant": pollutant,
+                    "samples": len(sub),
                     "biochar_groups": n_groups,
                     "features_used": x.shape[1],
                 }
             )
 
             rs = ShuffleSplit(n_splits=10, test_size=0.2, random_state=42)
-            for split_id, (train_idx, test_idx) in enumerate(rs.split(x_scaled), start=1):
+            for split_id, (train_idx, test_idx) in enumerate(
+                rs.split(x_scaled), start=1
+            ):
                 dists = nearest_neighbor_distances(x_scaled[train_idx], x_scaled[test_idx])
                 raw_records.extend(
                     {
@@ -241,68 +242,6 @@ def main() -> None:
         task_summary.to_excel(writer, sheet_name="task_summary", index=False)
         dataset_summary.to_excel(writer, sheet_name="dataset_summary", index=False)
         pivot.to_excel(writer, sheet_name="task_median_compare", index=False)
-
-    plt.figure(figsize=(10, 6))
-    ax = sns.boxplot(
-        data=raw_df,
-        x="dataset",
-        y="nn_distance",
-        hue="strategy",
-        showfliers=False,
-    )
-    sns.stripplot(
-        data=raw_df.sample(min(len(raw_df), 3000), random_state=42),
-        x="dataset",
-        y="nn_distance",
-        hue="strategy",
-        dodge=True,
-        size=2,
-        alpha=0.15,
-        linewidth=0,
-        palette=["#4C78A8", "#F58518"],
-        ax=ax,
-    )
-    handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[:2], labels[:2], title="Split")
-    label_map = {cfg["name"]: cfg["paper_label"] for cfg in DATASETS}
-    ticks = ax.get_xticks()
-    ax.set_xticks(ticks)
-    ax.set_xticklabels([label_map.get(t.get_text(), t.get_text()) for t in ax.get_xticklabels()])
-    ax.set_xlabel("Dataset")
-    ax.set_ylabel("Nearest train-sample distance")
-    ax.set_title("Nearest-neighbor distance in standardized feature space: Datasets I-IV, RS vs LOBO")
-    plt.tight_layout()
-    plt.savefig(OUT_DIR / "figure_nn_distance_by_dataset.svg", dpi=300, bbox_inches="tight")
-    plt.savefig(OUT_DIR / "figure_nn_distance_by_dataset.png", dpi=300, bbox_inches="tight")
-    plt.close()
-
-    if {"RS", "LOBO"}.issubset(pivot.columns):
-        plt.figure(figsize=(7, 7))
-        palette = {
-            "HM2": "#4C78A8",
-            "HMI_data": "#72B7B2",
-            "EC": "#F58518",
-            "PFAS": "#E45756",
-        }
-        for dataset, sub in pivot.groupby("dataset"):
-            plt.scatter(
-                sub["RS"],
-                sub["LOBO"],
-                s=45,
-                alpha=0.8,
-                label=label_map.get(dataset, dataset),
-                color=palette.get(dataset),
-            )
-        max_val = float(np.nanmax(pivot[["RS", "LOBO"]].to_numpy()))
-        plt.plot([0, max_val], [0, max_val], "--", color="gray", linewidth=1)
-        plt.xlabel("Median nearest-neighbor distance under RS")
-        plt.ylabel("Median nearest-neighbor distance under LOBO")
-        plt.title("Task-level median nearest-neighbor distance")
-        plt.legend(title="Dataset")
-        plt.tight_layout()
-        plt.savefig(OUT_DIR / "figure_nn_distance_task_medians.svg", dpi=300, bbox_inches="tight")
-        plt.savefig(OUT_DIR / "figure_nn_distance_task_medians.png", dpi=300, bbox_inches="tight")
-        plt.close()
 
     report_lines = []
     report_lines.append("Nearest-neighbor distance diagnostic complete.")

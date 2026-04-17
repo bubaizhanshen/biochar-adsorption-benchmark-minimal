@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,11 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from common_models import (
-    CANDIDATES,
-    DATASETS,
-    prepare_task_frame,
-)
+from common_models import CANDIDATES, DATASETS, prepare_task_frame
 
 OUT_DIR = ROOT / "outputs" / "shap_cross_model_ec"
 DEFAULT_TASKS = ("CBZ", "IBU", "IBF", "DCF")
@@ -61,7 +57,9 @@ def top_k_overlap(left: pd.Series, right: pd.Series, k: int) -> float:
     return float(len(left_top & right_top) / max(1, k))
 
 
-def fit_and_explain(candidate, x_train, y_train, x_test, n_jobs: int) -> tuple[np.ndarray, pd.Series]:
+def fit_and_explain(
+    candidate, x_train, y_train, x_test, n_jobs: int
+) -> tuple[np.ndarray, pd.Series]:
     model = candidate.builder(n_jobs)
     model.fit(x_train, y_train)
     pred = np.asarray(model.predict(x_test), dtype=float)
@@ -73,18 +71,27 @@ def fit_and_explain(candidate, x_train, y_train, x_test, n_jobs: int) -> tuple[n
         shap_values = explainer.shap_values(x_test)
         if isinstance(shap_values, list):
             shap_values = shap_values[0]
-    importance = pd.Series(np.abs(np.asarray(shap_values)).mean(axis=0), index=x_test.columns)
+    importance = pd.Series(
+        np.abs(np.asarray(shap_values)).mean(axis=0),
+        index=x_test.columns,
+    )
     return pred, importance.sort_values(ascending=False)
 
 
-def run_task(task: str, cfg, args: argparse.Namespace) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+def run_task(
+    task: str, cfg, args: argparse.Namespace
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     sub, usable_cols = prepare_task_frame(cfg, task)
     x = sub[usable_cols]
     y = sub[cfg.target_col]
 
     rf_candidate = get_candidate(RF_NAME)
     xgb_candidate = get_candidate(XGB_NAME)
-    splitter = ShuffleSplit(n_splits=args.n_splits, test_size=args.test_size, random_state=args.seed)
+    splitter = ShuffleSplit(
+        n_splits=args.n_splits,
+        test_size=args.test_size,
+        random_state=args.seed,
+    )
 
     split_rows: list[dict[str, object]] = []
     feature_rows: list[dict[str, object]] = []
@@ -94,8 +101,12 @@ def run_task(task: str, cfg, args: argparse.Namespace) -> tuple[list[dict[str, o
         x_test = x.iloc[test_idx].reset_index(drop=True)
         y_test = y.iloc[test_idx].reset_index(drop=True)
 
-        rf_pred, rf_imp = fit_and_explain(rf_candidate, x_train, y_train, x_test, args.n_jobs)
-        xgb_pred, xgb_imp = fit_and_explain(xgb_candidate, x_train, y_train, x_test, args.n_jobs)
+        rf_pred, rf_imp = fit_and_explain(
+            rf_candidate, x_train, y_train, x_test, args.n_jobs
+        )
+        xgb_pred, xgb_imp = fit_and_explain(
+            xgb_candidate, x_train, y_train, x_test, args.n_jobs
+        )
 
         rf_r2 = float(r2_score(y_test, rf_pred))
         xgb_r2 = float(r2_score(y_test, xgb_pred))
@@ -164,7 +175,9 @@ def build_summary(split_df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["shap_rank_spearman_mean", "top1_match_rate", "task"])
 
 
-def build_top_feature_table(feature_df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
+def build_top_feature_table(
+    feature_df: pd.DataFrame, top_n: int = 10
+) -> pd.DataFrame:
     grouped = (
         feature_df.groupby(["task", "feature"], as_index=False)[
             ["rf_importance", "xgb_importance", "rf_rank", "xgb_rank"]
@@ -174,18 +187,34 @@ def build_top_feature_table(feature_df: pd.DataFrame, top_n: int = 10) -> pd.Dat
     grouped["rank_gap"] = (grouped["rf_rank"] - grouped["xgb_rank"]).abs()
     rows = []
     for task, group in grouped.groupby("task"):
-        task_rows = group.sort_values(["rank_gap", "rf_importance"], ascending=[False, False]).head(top_n).copy()
+        task_rows = (
+            group.sort_values(
+                ["rank_gap", "rf_importance"],
+                ascending=[False, False],
+            )
+            .head(top_n)
+            .copy()
+        )
         rows.append(task_rows)
     return pd.concat(rows, ignore_index=True) if rows else grouped
 
 
-def write_report(out_dir: Path, summary_df: pd.DataFrame, split_df: pd.DataFrame, top_k: int) -> None:
+def write_report(
+    out_dir: Path,
+    summary_df: pd.DataFrame,
+    split_df: pd.DataFrame,
+    top_k: int,
+) -> None:
     lines = [
         "# RS Cross-Model SHAP Comparison (Dataset III / EC tasks)",
         "",
         f"- RF candidate: `{RF_NAME}`",
         f"- XGB candidate: `{XGB_NAME}`",
-        f"- Shared RS splitter: `ShuffleSplit(n_splits={split_df['split_id'].nunique()}, test_size=0.2, random_state=42)`",
+        (
+            "- Shared RS splitter: "
+            f"`ShuffleSplit(n_splits={split_df['split_id'].nunique()}, "
+            "test_size=0.2, random_state=42)`"
+        ),
         "",
     ]
     for _, row in summary_df.iterrows():
