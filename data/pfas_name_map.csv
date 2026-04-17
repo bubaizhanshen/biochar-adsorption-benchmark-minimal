@@ -1,0 +1,11 @@
+Common_Name,SMILES
+6:2 FTSA,C(CS(=O)(=O)O)C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F
+PFBA,C(=O)(C(C(C(F)(F)F)(F)F)(F)F)O
+PFBS,C(C(C(F)(F)S(=O)(=O)O)(F)F)(C(F)(F)F)(F)F
+PFHpA,C(=O)(C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)O
+PFHxA,C(=O)(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)O
+PFHxS,C(C(C(C(F)(F)S(=O)(=O)O)(F)F)(F)F)(C(C(F)(F)F)(F)F)(F)F
+PFNA,C(=O)(C(C(C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)O
+PFOA,C(=O)(C(C(C(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)(F)F)O
+PFOS,C(C(C(C(C(F)(F)S(=O)(=O)O)(F)F)(F)F)(F)F)(C(C(C(F)(F)F)(F)F)(F)F)(F)F
+PFPeA,C(=O)(C(C(C(C(F)(F)F)(F)F)(F)F)(F)F)O
