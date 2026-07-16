@@ -1,0 +1,31 @@
+array_id,task_order,dataset,contaminant,fold_id,source_study_id,test_n,test_n_material_groups,task_n_rows,task_n_material_groups,task_n_source_studies,train_n_material_groups
+1,1,Dataset I,Cd (II),1,Alves2021,80,16,354,55,8,39
+2,1,Dataset I,Cd (II),2,Cui2016_Canna,24,4,354,55,8,51
+3,1,Dataset I,Cd (II),3,Cui2016_Wetland,14,4,354,55,8,51
+4,1,Dataset I,Cd (II),4,Gao2019,48,3,354,55,8,52
+5,1,Dataset I,Cd (II),5,Huang2021,65,2,354,55,8,53
+6,1,Dataset I,Cd (II),6,Trakal2014,5,5,354,55,8,50
+7,1,Dataset I,Cd (II),7,Wang2021_invasive,70,5,354,55,8,50
+8,1,Dataset I,Cd (II),8,Zama2017,48,16,354,55,8,39
+9,2,Dataset I,Pb (II),1,Jin2020_dissertation,10,2,115,29,7,27
+10,2,Dataset I,Pb (II),2,Li2018,14,2,115,29,7,27
+11,2,Dataset I,Pb (II),3,Sakhiya2022,11,1,115,29,7,28
+12,2,Dataset I,Pb (II),4,Shen2015_2017,24,2,115,29,7,27
+13,2,Dataset I,Pb (II),5,Sun2014_Ding2016,3,1,115,29,7,28
+14,2,Dataset I,Pb (II),6,Trakal2014,5,5,115,29,7,24
+15,2,Dataset I,Pb (II),7,Zama2017,48,16,115,29,7,13
+16,3,Dataset I,Cu (II),1,Jiang2016,6,2,95,9,3,7
+17,3,Dataset I,Cu (II),2,Nie2019,20,2,95,9,3,7
+18,3,Dataset I,Cu (II),3,Wang2021_invasive,69,5,95,9,3,4
+19,6,Dataset II,Sr (II),1,Shin2021_Alkaline,156,2,763,9,4,7
+20,6,Dataset II,Sr (II),2,Shin2021_Magnetic,168,2,763,9,4,7
+21,6,Dataset II,Sr (II),3,Shin2021_Strontium,124,2,763,9,4,7
+22,6,Dataset II,Sr (II),4,Shin2022_Postmodification,315,3,763,9,4,6
+23,9,Dataset III,Ibuprofen,1,Kwak2020_Pine,162,2,1350,11,5,9
+24,9,Dataset III,Ibuprofen,2,Shin2019_Pharmaceuticals,108,2,1350,11,5,9
+25,9,Dataset III,Ibuprofen,3,Shin2020_Micropollutants,267,2,1350,11,5,9
+26,9,Dataset III,Ibuprofen,4,Shin2021_Competitive,309,2,1350,11,5,9
+27,9,Dataset III,Ibuprofen,5,Shin2022_Ibuprofen,504,3,1350,11,5,8
+28,10,Dataset III,CBZ,1,Kwak2020_Pine,162,2,526,6,3,4
+29,10,Dataset III,CBZ,2,Shin2019_Pharmaceuticals,108,2,526,6,3,4
+30,10,Dataset III,CBZ,3,Shin2020_Micropollutants,256,2,526,6,3,4

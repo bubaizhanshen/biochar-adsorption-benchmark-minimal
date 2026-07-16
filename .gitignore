@@ -1,4 +1,12 @@
-outputs/
+.venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.tiff
 .DS_Store
+figure_contact_sheet.png
+reanalysis/results/material_holdout_shards/
+reanalysis/results/source_study_holdout_shards/
+reanalysis/results/source_inner_source_sensitivity_shards/
+reanalysis/results/source_inner_source_sensitivity_logs/
+reanalysis/results/candidate_panel_benchmark_10_tasks/full_shards/
+reanalysis/results/candidate_panel_benchmark_10_tasks/condition_only_shards/

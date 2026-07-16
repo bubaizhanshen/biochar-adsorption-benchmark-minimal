@@ -1,0 +1,6 @@
+field,required_for,minimum_content
+source_study_id,source-study holdout and provenance audit,Stable identifier for the study or explicitly linked source family.
+material_id,held-material response prediction and candidate-panel holdout,Source-specific material or batch label; do not infer identity only from rounded properties.
+adsorption_conditions,condition-matched candidate comparison,"Units and values for all recorded operating variables, including pH, concentration, time, dose, temperature, and matrix variables."
+response,response and contrast metrics,"Outcome definition, units, replicate identifier, and any transformation applied before modeling."
+material_descriptors,candidate prediction,Descriptors measured consistently for training materials and prospective candidates.

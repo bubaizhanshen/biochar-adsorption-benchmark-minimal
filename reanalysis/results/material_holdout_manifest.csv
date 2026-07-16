@@ -1,0 +1,147 @@
+array_id,task_order,dataset,contaminant,fold_id,material_group_code,material_group,test_n,task_n_rows,task_n_material_groups
+1,1,Dataset I,Cd (II),1,0,Zama2017::BWH350,3,354,55
+2,1,Dataset I,Cd (II),2,1,Zama2017::BWH450,3,354,55
+3,1,Dataset I,Cd (II),3,2,Zama2017::BWH550,3,354,55
+4,1,Dataset I,Cd (II),4,3,Zama2017::BWH650,3,354,55
+5,1,Dataset I,Cd (II),5,4,Zama2017::CC350,3,354,55
+6,1,Dataset I,Cd (II),6,5,Zama2017::CC450,3,354,55
+7,1,Dataset I,Cd (II),7,6,Zama2017::CC550,3,354,55
+8,1,Dataset I,Cd (II),8,7,Zama2017::CC650,3,354,55
+9,1,Dataset I,Cd (II),9,8,Zama2017::MW350,3,354,55
+10,1,Dataset I,Cd (II),10,9,Zama2017::MW450,3,354,55
+11,1,Dataset I,Cd (II),11,10,Zama2017::MW550,3,354,55
+12,1,Dataset I,Cd (II),12,11,Zama2017::MW650,3,354,55
+13,1,Dataset I,Cd (II),13,12,Zama2017::PS350,3,354,55
+14,1,Dataset I,Cd (II),14,13,Zama2017::PS450,3,354,55
+15,1,Dataset I,Cd (II),15,14,Zama2017::PS550,3,354,55
+16,1,Dataset I,Cd (II),16,15,Zama2017::PS650,3,354,55
+17,1,Dataset I,Cd (II),17,16,Cui2016_Canna::CI300,6,354,55
+18,1,Dataset I,Cd (II),18,17,Cui2016_Canna::CI400,6,354,55
+19,1,Dataset I,Cd (II),19,18,Cui2016_Canna::CI500,6,354,55
+20,1,Dataset I,Cd (II),20,19,Cui2016_Canna::CI600,6,354,55
+21,1,Dataset I,Cd (II),21,20,Cui2016_Wetland::TD500,3,354,55
+22,1,Dataset I,Cd (II),22,21,Cui2016_Wetland::PA500,3,354,55
+23,1,Dataset I,Cd (II),23,22,Cui2016_Wetland::ZC500,4,354,55
+24,1,Dataset I,Cd (II),24,23,Cui2016_Wetland::VZ500,4,354,55
+25,1,Dataset I,Cd (II),25,24,Gao2019::RS300,16,354,55
+26,1,Dataset I,Cd (II),26,25,Gao2019::RS500,16,354,55
+27,1,Dataset I,Cd (II),27,26,Gao2019::RS700,16,354,55
+28,1,Dataset I,Cd (II),28,27,Trakal2014::NS600,1,354,55
+29,1,Dataset I,Cd (II),29,28,Trakal2014::WS600,1,354,55
+30,1,Dataset I,Cd (II),30,29,Trakal2014::GS600,1,354,55
+31,1,Dataset I,Cd (II),31,30,Trakal2014::GH600,1,354,55
+32,1,Dataset I,Cd (II),32,31,Trakal2014::PS600,1,354,55
+33,1,Dataset I,Cd (II),33,32,Alves2021::SWB 800- i,5,354,55
+34,1,Dataset I,Cd (II),34,33,Alves2021::SWB 650,5,354,55
+35,1,Dataset I,Cd (II),35,34,Alves2021::SWB 650 - m1,5,354,55
+36,1,Dataset I,Cd (II),36,35,Alves2021::SWB 500,5,354,55
+37,1,Dataset I,Cd (II),37,36,Alves2021::ASB 500 - 1,5,354,55
+38,1,Dataset I,Cd (II),38,37,Alves2021::ASB 500 - 2,5,354,55
+39,1,Dataset I,Cd (II),39,38,Alves2021::WSB 500,5,354,55
+40,1,Dataset I,Cd (II),40,39,Alves2021::WSB 900,5,354,55
+41,1,Dataset I,Cd (II),41,40,Alves2021::WSB 700 - 6 0,5,354,55
+42,1,Dataset I,Cd (II),42,41,Alves2021::WSB 700 - 9 0,5,354,55
+43,1,Dataset I,Cd (II),43,42,Alves2021::SSB 450,5,354,55
+44,1,Dataset I,Cd (II),44,43,Alves2021::SSB 700,5,354,55
+45,1,Dataset I,Cd (II),45,44,Alves2021::CSB 600,5,354,55
+46,1,Dataset I,Cd (II),46,45,Alves2021::CSB 600 - m 1,5,354,55
+47,1,Dataset I,Cd (II),47,46,Alves2021::CSB 600 - m 2,5,354,55
+48,1,Dataset I,Cd (II),48,47,Alves2021::CSB 600 - m 3,5,354,55
+49,1,Dataset I,Cd (II),49,48,Wang2021_invasive::BBC500,14,354,55
+50,1,Dataset I,Cd (II),50,49,Wang2021_invasive::PBC500,14,354,55
+51,1,Dataset I,Cd (II),51,50,Wang2021_invasive::IBC500,14,354,55
+52,1,Dataset I,Cd (II),52,51,Wang2021_invasive::MBC500,14,354,55
+53,1,Dataset I,Cd (II),53,52,Wang2021_invasive::LBC500,14,354,55
+54,1,Dataset I,Cd (II),54,53,Huang2021::RSB,31,354,55
+55,1,Dataset I,Cd (II),55,54,Huang2021::SSB,34,354,55
+56,2,Dataset I,Pb (II),1,0,Li2018::WS600,7,115,29
+57,2,Dataset I,Pb (II),2,1,Li2018::RH600,7,115,29
+58,2,Dataset I,Pb (II),3,2,Zama2017::BWH350,3,115,29
+59,2,Dataset I,Pb (II),4,3,Zama2017::BWH450,3,115,29
+60,2,Dataset I,Pb (II),5,4,Zama2017::BWH550,3,115,29
+61,2,Dataset I,Pb (II),6,5,Zama2017::BWH650,3,115,29
+62,2,Dataset I,Pb (II),7,6,Zama2017::CC350,3,115,29
+63,2,Dataset I,Pb (II),8,7,Zama2017::CC450,3,115,29
+64,2,Dataset I,Pb (II),9,8,Zama2017::CC550,3,115,29
+65,2,Dataset I,Pb (II),10,9,Zama2017::CC650,3,115,29
+66,2,Dataset I,Pb (II),11,10,Zama2017::MW350,3,115,29
+67,2,Dataset I,Pb (II),12,11,Zama2017::MW450,3,115,29
+68,2,Dataset I,Pb (II),13,12,Zama2017::MW550,3,115,29
+69,2,Dataset I,Pb (II),14,13,Zama2017::MW650,3,115,29
+70,2,Dataset I,Pb (II),15,14,Zama2017::PS350,3,115,29
+71,2,Dataset I,Pb (II),16,15,Zama2017::PS450,3,115,29
+72,2,Dataset I,Pb (II),17,16,Zama2017::PS550,3,115,29
+73,2,Dataset I,Pb (II),18,17,Zama2017::PS650,3,115,29
+74,2,Dataset I,Pb (II),19,18,Shen2015_2017::BBH600/0.15,12,115,29
+75,2,Dataset I,Pb (II),20,19,Shen2015_2017::BBH600/2.0,12,115,29
+76,2,Dataset I,Pb (II),21,20,Sun2014_Ding2016::HWC600,3,115,29
+77,2,Dataset I,Pb (II),22,21,Trakal2014::NS600,1,115,29
+78,2,Dataset I,Pb (II),23,22,Trakal2014::WS600,1,115,29
+79,2,Dataset I,Pb (II),24,23,Trakal2014::GS600,1,115,29
+80,2,Dataset I,Pb (II),25,24,Trakal2014::GH600,1,115,29
+81,2,Dataset I,Pb (II),26,25,Trakal2014::PS600,1,115,29
+82,2,Dataset I,Pb (II),27,26,Jin2020_dissertation::GP500,5,115,29
+83,2,Dataset I,Pb (II),28,27,Jin2020_dissertation::GPL2700,5,115,29
+84,2,Dataset I,Pb (II),29,28,Sakhiya2022::RSB500,11,115,29
+85,3,Dataset I,Cu (II),1,0,Jiang2016::JWC700,3,95,9
+86,3,Dataset I,Cu (II),2,1,Jiang2016::PWC700,3,95,9
+87,3,Dataset I,Cu (II),3,2,Wang2021_invasive::BBC500,14,95,9
+88,3,Dataset I,Cu (II),4,3,Wang2021_invasive::PBC500,13,95,9
+89,3,Dataset I,Cu (II),5,4,Wang2021_invasive::IBC500,14,95,9
+90,3,Dataset I,Cu (II),6,5,Wang2021_invasive::MBC500,14,95,9
+91,3,Dataset I,Cu (II),7,6,Wang2021_invasive::LBC500,14,95,9
+92,3,Dataset I,Cu (II),8,7,Nie2019::BC400,10,95,9
+93,3,Dataset I,Cu (II),9,8,Nie2019::BC600,10,95,9
+94,4,Dataset I,Ni (II),1,0,Shen2017_Ni::WSP550,16,65,4
+95,4,Dataset I,Ni (II),2,1,Shen2017_Ni::WSP700,14,65,4
+96,4,Dataset I,Ni (II),3,2,Shen2017_Ni::RH550,18,65,4
+97,4,Dataset I,Ni (II),4,3,Shen2017_Ni::RH700,17,65,4
+98,5,Dataset I,As (III),1,0,Zama2017::BWH350,3,43,15
+99,5,Dataset I,As (III),2,1,Zama2017::BWH450,3,43,15
+100,5,Dataset I,As (III),3,2,Zama2017::BWH550,3,43,15
+101,5,Dataset I,As (III),4,3,Zama2017::BWH650,3,43,15
+102,5,Dataset I,As (III),5,4,Zama2017::CC350,3,43,15
+103,5,Dataset I,As (III),6,5,Zama2017::CC450,2,43,15
+104,5,Dataset I,As (III),7,6,Zama2017::CC550,3,43,15
+105,5,Dataset I,As (III),8,7,Zama2017::CC650,3,43,15
+106,5,Dataset I,As (III),9,8,Zama2017::MW350,3,43,15
+107,5,Dataset I,As (III),10,9,Zama2017::MW550,3,43,15
+108,5,Dataset I,As (III),11,10,Zama2017::MW650,3,43,15
+109,5,Dataset I,As (III),12,11,Zama2017::PS350,3,43,15
+110,5,Dataset I,As (III),13,12,Zama2017::PS450,2,43,15
+111,5,Dataset I,As (III),14,13,Zama2017::PS550,3,43,15
+112,5,Dataset I,As (III),15,14,Zama2017::PS650,3,43,15
+113,6,Dataset II,Sr (II),1,0,Shin2021_Alkaline::SCWB-P,78,763,9
+114,6,Dataset II,Sr (II),2,1,Shin2021_Alkaline::SCWB-A,78,763,9
+115,6,Dataset II,Sr (II),3,2,Shin2021_Strontium::CBC500,63,763,9
+116,6,Dataset II,Sr (II),4,3,Shin2021_Strontium::PAC,61,763,9
+117,6,Dataset II,Sr (II),5,4,Shin2021_Magnetic::SCG,84,763,9
+118,6,Dataset II,Sr (II),6,5,Shin2021_Magnetic::Fe@SCG,84,763,9
+119,6,Dataset II,Sr (II),7,6,Shin2022_Postmodification::RCWB-P,105,763,9
+120,6,Dataset II,Sr (II),8,7,Shin2022_Postmodification::RCWB-HP,105,763,9
+121,6,Dataset II,Sr (II),9,8,Shin2022_Postmodification::RCWB-NHP,105,763,9
+122,7,Dataset II,Fe (III),1,0,Kim2020_Banana::BPB,30,126,5
+123,7,Dataset II,Fe (III),2,1,Kim2020_Banana::PBPB,30,126,5
+124,7,Dataset II,Fe (III),3,2,Seo2020_Peanut::PB,22,126,5
+125,7,Dataset II,Fe (III),4,3,Seo2020_Peanut::PB-Ox,22,126,5
+126,7,Dataset II,Fe (III),5,4,Seo2020_Peanut::PB-Ox-A,22,126,5
+127,8,Dataset II,Cr(VI),1,0,Seo2020_Peanut::PB,25,75,3
+128,8,Dataset II,Cr(VI),2,1,Seo2020_Peanut::PB-Ox,25,75,3
+129,8,Dataset II,Cr(VI),3,2,Seo2020_Peanut::PB-Ox-A,25,75,3
+130,9,Dataset III,Ibuprofen,1,0,Kwak2020_Pine::PB600,81,1350,11
+131,9,Dataset III,Ibuprofen,2,1,Kwak2020_Pine::PB800,81,1350,11
+132,9,Dataset III,Ibuprofen,3,2,Shin2019_Pharmaceuticals::C-Biochar,54,1350,11
+133,9,Dataset III,Ibuprofen,4,3,Shin2019_Pharmaceuticals::PAC,54,1350,11
+134,9,Dataset III,Ibuprofen,5,4,Shin2020_Micropollutants::Pristine SCG biochar,130,1350,11
+135,9,Dataset III,Ibuprofen,6,5,Shin2020_Micropollutants::Alkali-modified SCG biochars,137,1350,11
+136,9,Dataset III,Ibuprofen,7,6,Shin2021_Competitive::Pristine SCW Biochar,147,1350,11
+137,9,Dataset III,Ibuprofen,8,7,Shin2021_Competitive::NaOH-activated SCW biochars,162,1350,11
+138,9,Dataset III,Ibuprofen,9,8,Shin2022_Ibuprofen::CB,168,1350,11
+139,9,Dataset III,Ibuprofen,10,9,Shin2022_Ibuprofen::MCB,168,1350,11
+140,9,Dataset III,Ibuprofen,11,10,Shin2022_Ibuprofen::AMCB,168,1350,11
+141,10,Dataset III,CBZ,1,0,Kwak2020_Pine::PB600,81,526,6
+142,10,Dataset III,CBZ,2,1,Kwak2020_Pine::PB800,81,526,6
+143,10,Dataset III,CBZ,3,2,Shin2019_Pharmaceuticals::C-Biochar,54,526,6
+144,10,Dataset III,CBZ,4,3,Shin2019_Pharmaceuticals::PAC,54,526,6
+145,10,Dataset III,CBZ,5,4,Shin2020_Micropollutants::Pristine SCG biochar,130,526,6
+146,10,Dataset III,CBZ,6,5,Shin2020_Micropollutants::Alkali-modified SCG biochars,126,526,6

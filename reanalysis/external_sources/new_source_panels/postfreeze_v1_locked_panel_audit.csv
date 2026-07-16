@@ -1,0 +1,20 @@
+study_id,panel_id,status,reason
+Vasconcelos2025,Vasconcelos2025_MB_concentration,included_locked_primary,Three fixed candidates at three directly tabulated shared concentrations.
+Vasconcelos2025,Vasconcelos2025_17bE2_concentration,included_locked_primary,Three fixed candidates at three directly tabulated shared concentrations.
+Wang2021,Wang2021_phosphate_kinetics,included_locked_primary,Five predefined loaded-biochar candidates measured in triplicate at 12 shared times.
+Wang2021,Wang2021_phosphate_isotherm,excluded_primary_condition_mismatch,Al-BC was shaken for 168 h whereas the other candidates were shaken for 24 h.
+Wang2021,Wang2021_phosphate_kinetics_with_pristine_control,sensitivity_not_primary,Pristine BC was an experimental control rather than one of the five predefined loaded-biochar candidates.
+Padilla2023,Padilla2023_phosphate_initial_pH,included_locked_primary,Nine fixed 1.0 M Mg-activated biochars were measured in triplicate at five shared initial-pH strata.
+Padilla2023,Padilla2023_phosphate_isotherm,excluded_primary_not_reconstructable,The archived isotherm worksheet did not provide a directly auditable shared initial-concentration vector for every candidate.
+Ogbuagu2023,Ogbuagu2023_Pb_coco_coir_concentration,included_locked_primary,All 10 fixed temperature-defined biochars shared 5 exact initial-Pb concentration strata.
+Ogbuagu2023,Ogbuagu2023_Pb_hay_concentration,excluded_primary_insufficient_exact_shared_conditions,All 10 candidates shared only 1 exact initial-concentration stratum; the frozen protocol requires at least three.
+Ogbuagu2023,Ogbuagu2023_Pb_pine_bark_concentration,included_locked_primary,All 10 fixed temperature-defined biochars shared 4 exact initial-Pb concentration strata.
+Ogbuagu2023,Ogbuagu2023_Pb_wheat_straw_concentration,included_locked_primary,All 10 fixed temperature-defined biochars shared 5 exact initial-Pb concentration strata.
+Soria2020,Soria2020_Cd_isotherm,included_locked_primary,Five source-defined fixed biochars had replicate-level Cd(II) responses at 8 shared concentration strata.
+Soria2020,Soria2020_Pb_isotherm,included_locked_primary,Five source-defined fixed biochars had replicate-level Pb(II) responses at 9 shared concentration strata.
+Soria2020,Soria2020_Zn_isotherm,included_locked_primary,Five source-defined fixed biochars had replicate-level Zn(II) responses at 8 shared concentration strata.
+Soria2020,Soria2020_SW550AW_archive_rows,excluded_not_source_defined_candidate,SWP550AW appears in the archive but is not one of the five biochars defined as candidates in the source article.
+Wei2025,Wei2025_urea_kinetics,included_locked_primary,Four source-defined fixed materials were measured in triplicate at 11 shared strata; the workbook's error type was unspecified and was not treated as SD.
+Wei2025,Wei2025_urea_initial_pH,included_locked_primary,Four source-defined fixed materials were measured in triplicate at 5 shared strata; the workbook's error type was unspecified and was not treated as SD.
+Wei2025,Wei2025_urea_temperature,included_locked_primary,Four source-defined fixed materials were measured in triplicate at 3 shared strata; the workbook's error type was unspecified and was not treated as SD.
+Wei2025,Wei2025_urea_isotherm,included_locked_primary,Four source-defined fixed materials were measured in triplicate at 6 shared strata; the workbook's error type was unspecified and was not treated as SD.

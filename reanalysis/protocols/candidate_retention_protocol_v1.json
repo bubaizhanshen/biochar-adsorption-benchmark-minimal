@@ -1,0 +1,45 @@
+{
+  "protocol_id": "BC-CANDIDATE-RETENTION-2026-07-16-v1",
+  "frozen_on": "2026-07-16",
+  "status": "frozen_before_additional_external-panel screening",
+  "intended_use": "Retain a conservative subset of a fixed biochar candidate panel for continued testing across a prespecified adsorption-condition domain.",
+  "decision_endpoint": "Retention of at least one truly best candidate at each unmeasured shared condition, not prediction of absolute adsorption response and not selection of one universal winner.",
+  "eligibility": {
+    "candidate_unit": "fixed physical biochar material",
+    "minimum_candidates": 3,
+    "minimum_shared_condition_strata": 3,
+    "condition_design": "All candidates must have measured responses at every shared stratum used for evaluation.",
+    "condition_variables": "Numeric operational variables with prespecified bounds; fitted endpoints, preparation settings that create new materials, and Monte Carlo summaries are ineligible for primary evaluation.",
+    "response": "Directly tabulated experimental adsorption response with a common direction of benefit."
+  },
+  "anchor_selection": {
+    "number_of_anchors": 2,
+    "scaling": "Min-max scale each varying numeric condition variable using only the planned condition-domain bounds.",
+    "rule": "Select the pair of available condition strata with the largest Euclidean separation in scaled condition space.",
+    "tie_break": "Use source-table order, then lexical stratum identifier.",
+    "one_dimensional_interpretation": "Use the two condition-domain endpoints."
+  },
+  "candidate_retention": {
+    "ranking": "Rank candidates by observed response within each anchor, with larger response treated as better.",
+    "per_anchor_cutoff": "ceil(number_of_candidates / 2)",
+    "retained_set": "Union of candidates in the top half at either boundary anchor.",
+    "abstention": "If eligibility or complete shared-condition coverage is not satisfied, retain all candidates and classify the panel as out of scope."
+  },
+  "primary_metrics": [
+    "query_best_coverage",
+    "mean_normalized_regret",
+    "candidate_reduction_fraction",
+    "assay_reduction_fraction"
+  ],
+  "analysis_unit": "candidate panel; condition strata within a panel are not treated as independent studies",
+  "development_evidence": "Original complete candidate panels and the first screened external set were used to formulate this protocol and are not prospective validation data.",
+  "locked_external_evaluation": "Every subsequently identified eligible panel must be reported, regardless of outcome, with no change to anchor selection, retention cutoff, or endpoints.",
+  "claims_not_supported": [
+    "formal safety guarantee",
+    "automatic selection of one best biochar",
+    "transfer to unmeasured materials",
+    "optimization of biochar preparation settings",
+    "replacement of confirmation experiments",
+    "generalization beyond the prespecified condition domain"
+  ]
+}

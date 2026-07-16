@@ -1,0 +1,11 @@
+dataset,contaminant,task,n_rows,n_material_groups,n_source_studies,matched_strata
+Dataset I,Cd (II),Cd(II),354,55,8,36.0
+Dataset I,Pb (II),Pb(II),115,29,7,3.0
+Dataset I,Cu (II),Cu(II),95,9,3,6.0
+Dataset I,Ni (II),Ni(II),65,4,1,0.0
+Dataset I,As (III),As(III),43,15,1,0.0
+Dataset II,Sr (II),Sr(II),763,9,4,29.0
+Dataset II,Fe (III),Fe(III),126,5,2,0.0
+Dataset II,Cr(VI),Cr(VI),75,3,1,0.0
+Dataset III,Ibuprofen,IBU,1350,11,5,11.0
+Dataset III,CBZ,CBZ,526,6,3,0.0

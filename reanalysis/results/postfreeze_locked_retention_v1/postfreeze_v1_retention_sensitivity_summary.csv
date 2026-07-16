@@ -1,0 +1,6 @@
+strategy,analysis_status,n_sources,sources_all_query_best_retained,descriptive_source_compatibility_rate,source_balanced_mean_assay_reduction_fraction,pooled_assay_reduction_fraction,mean_panel_query_best_coverage,mean_panel_normalized_regret
+ever_top_half_frozen_primary,frozen_primary,6,5,0.8333333333333334,0.19783597883597884,0.21106557377049184,0.9523809523809523,0.0033871657776565096
+ever_top_one_third,postfreeze_exploratory_sensitivity,6,3,0.5,0.2938624338624339,0.2909836065573771,0.8452380952380951,0.005469706056175522
+ever_top_three_quarters,postfreeze_exploratory_sensitivity,6,6,1.0,0.06684126984126983,0.07786885245901642,1.0,0.0
+ever_top_two_thirds,postfreeze_exploratory_sensitivity,6,6,1.0,0.1048042328042328,0.10245901639344257,1.0,0.0
+retain_all,postfreeze_exploratory_sensitivity,6,6,1.0,0.0,0.0,1.0,0.0
