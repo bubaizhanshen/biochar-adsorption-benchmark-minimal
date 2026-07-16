@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail fast when repository data no longer match the manuscript results."""
+"""Fail fast when repository data no longer match the frozen release results."""
 
 from __future__ import annotations
 
@@ -227,29 +227,6 @@ def verify_locked_application() -> dict[str, float | int | str]:
     }
 
 
-def verify_artwork() -> dict[str, int]:
-    directory = RESULTS / "screening_evidence_revision/figure_redesign_v2"
-    stems = [
-        "Figure_1_validation_design",
-        "Figure_2_data_support",
-        "Figure_3_response_transfer",
-        "Figure_4_condition_vs_material",
-        "Figure_5_locked_candidate_retention_final",
-        "Graphical_Abstract_locked_application_final",
-    ]
-    for stem in stems:
-        for suffix in (".svg", ".pdf", ".png"):
-            path = directory / f"{stem}{suffix}"
-            if not path.exists() or path.stat().st_size == 0:
-                raise AssertionError(f"Missing artwork file: {path}")
-    toc = (directory / "Graphical_Abstract_locked_application_final.svg").read_text(
-        encoding="utf-8"
-    )[:1000]
-    if 'width="368.503937pt"' not in toc or 'height="141.732283pt"' not in toc:
-        raise AssertionError("Graphical abstract is not 130 mm by 50 mm")
-    return {"figure_stems": len(stems), "formats_per_figure": 3}
-
-
 def main() -> None:
     protocol = verify_protocol()
     material = verify_material_holdout()
@@ -257,7 +234,6 @@ def main() -> None:
     source_inner = verify_source_inner_sensitivity()
     candidate = verify_candidate_panels()
     application = verify_locked_application()
-    artwork = verify_artwork()
     report = [
         "# Release audit",
         "",
@@ -269,9 +245,8 @@ def main() -> None:
         f"- Source-grouped inner-tuning sensitivity: {source_inner['tasks']} tasks, median Q2 = {source_inner['median_q2']:.3f}; {source_inner['positive_intervals']} empirical intervals above zero",
         f"- Candidate panels: {candidate['primary_panels']} primary panels, {candidate['condition_strata']} shared-condition strata, {candidate['both_positive_intervals']} with contrast and ordering intervals above baseline",
         f"- Locked application: {application['query_bests_retained']}/{application['query_strata']} query bests retained; source-balanced assay-cell reduction = {100 * application['source_balanced_assay_reduction']:.1f}%",
-        f"- Artwork: {artwork['figure_stems']} figure/TOC stems in SVG, PDF, and PNG",
         "",
-        "The audit checks numerical consistency with the manuscript; it does not convert retrospective evidence into a prospective deployment guarantee.",
+        "The audit checks numerical consistency within the frozen release; it does not convert retrospective evidence into a prospective deployment guarantee.",
     ]
     output = RESULTS / "release_audit_report.md"
     output.write_text("\n".join(report) + "\n", encoding="utf-8")

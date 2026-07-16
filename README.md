@@ -1,6 +1,6 @@
 # Material- and source-aware evaluation of biochar adsorption models
 
-This repository accompanies the manuscript **“A Material- and Source-Aware Benchmark of Biochar Adsorption Models: From Response Prediction to Candidate Prioritization.”**
+This repository provides the data, identity registries, frozen protocol, analysis code, and numerical outputs for material- and source-aware evaluation of biochar adsorption models.
 
 ## Scientific question
 
@@ -52,8 +52,7 @@ reanalysis/
 └── results/
     ├── merged_ibuprofen_benchmark/     # held-material, held-source, and panel evidence
     ├── candidate_panel_benchmark_10_tasks/
-    ├── postfreeze_locked_retention_v1/
-    └── screening_evidence_revision/figure_redesign_v2/
+    └── postfreeze_locked_retention_v1/
 ```
 
 `IBU` and `IBF` labels in the source table refer to ibuprofen records and are combined into one task. The PFAS compilation used in an earlier exploratory version is not part of the material-transfer benchmark because explicit biochar identities could not be reconstructed sufficiently for the required holdouts.
@@ -70,7 +69,7 @@ pip install -r requirements.txt
 
 ## Fast numerical audit
 
-This command checks the protocol checksum, task order, OOF coverage, fold counts, candidate-panel evidence, locked failures, headline values, and artwork inventory:
+This command checks the protocol checksum, task order, OOF coverage, fold counts, candidate-panel evidence, locked failures, and headline values:
 
 ```bash
 python reanalysis/scripts/verify_release.py
@@ -131,10 +130,6 @@ python reanalysis/scripts/build_candidate_evidence.py
 ```
 
 Panels 5 and 8 are retained as sensitivity analyses; the primary claim uses the 10 complete single-source panels.
-
-## Manuscript artwork
-
-Final SVG, PDF, and PNG files and the quantitative source-data tables are included for result inspection. Manuscript-figure construction code is not part of this public release.
 
 ## Interpretation limits
 

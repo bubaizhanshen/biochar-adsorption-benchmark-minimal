@@ -9,7 +9,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy.stats import beta
 
 from evaluate_external_candidate_retention import (
     ever_top_fraction_retained,
@@ -40,12 +39,6 @@ def verify_protocol() -> str:
             f"Frozen protocol checksum mismatch: expected {expected}, observed {observed}"
         )
     return observed
-
-
-def clopper_pearson(successes: int, trials: int, alpha: float = 0.05) -> tuple[float, float]:
-    lower = 0.0 if successes == 0 else float(beta.ppf(alpha / 2, successes, trials - successes + 1))
-    upper = 1.0 if successes == trials else float(beta.ppf(1 - alpha / 2, successes + 1, trials - successes))
-    return lower, upper
 
 
 def protocol_seed(protocol_id: str, panel_id: str) -> int:
@@ -305,7 +298,6 @@ def main() -> None:
 
     n_sources = len(source_results)
     successful_sources = int(source_results["all_query_best_retained"].sum())
-    interval_low, interval_high = clopper_pearson(successful_sources, n_sources)
     total_baseline = int(results["baseline_assay_units"].sum())
     total_protocol = int(results["protocol_assay_units"].sum())
     summary = pd.DataFrame(
@@ -318,8 +310,6 @@ def main() -> None:
                 "n_query_strata": len(query_results),
                 "sources_all_query_best_retained": successful_sources,
                 "descriptive_source_compatibility_rate": successful_sources / n_sources,
-                "exact_binomial_reference_interval_low": interval_low,
-                "exact_binomial_reference_interval_high": interval_high,
                 "source_balanced_mean_assay_reduction_fraction": float(
                     source_results["assay_reduction_fraction"].mean()
                 ),
@@ -340,8 +330,8 @@ def main() -> None:
                     query_results["relative_regret_to_best"].max()
                 ),
                 "inference_caveat": (
-                    "The exact binomial interval is a small-sample reference only; "
-                    "the screened sources are not a probability sample."
+                    "The screened source studies are not a probability sample; "
+                    "the source compatibility rate is descriptive."
                 ),
             }
         ]

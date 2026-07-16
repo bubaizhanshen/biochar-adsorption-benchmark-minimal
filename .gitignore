@@ -3,7 +3,6 @@ __pycache__/
 *.py[cod]
 *.tiff
 .DS_Store
-figure_contact_sheet.png
 reanalysis/results/material_holdout_shards/
 reanalysis/results/source_study_holdout_shards/
 reanalysis/results/source_inner_source_sensitivity_shards/

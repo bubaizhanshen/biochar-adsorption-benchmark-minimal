@@ -31,7 +31,7 @@ The primary evaluation contains 6 article-level source studies, 14 eligible pane
 
 The frozen rule retained every query-best candidate in 5 of 6 source studies. At the query level, 57 of 59 best candidates were retained (96.6%). Source-balanced assay-cell reduction was 19.8%, and pooled assay-cell reduction was 21.1%.
 
-This result does not establish a safety guarantee. The exact-binomial 35.9%-99.6% interval is a small-sample reference only because the six sources were not sampled from a defined population.
+This result does not establish a safety guarantee or a population success rate. The six source studies were not sampled from a defined population, so the source compatibility rate is reported descriptively.
 
 ## Locked failures
 
@@ -85,6 +85,6 @@ The output must be one of the following:
 
 It must not be used to select one universal winner, optimize preparation settings, infer performance for unmeasured materials, replace confirmation experiments, or justify safety-critical elimination.
 
-## Manuscript-level conclusion
+## Release-level interpretation
 
 The locked analysis supports a bounded application claim: two shared-condition pilot assays sometimes reduce the remaining candidate-by-condition workload, but exact-best retention and assay-cell savings trade off. The observed failure rules out language such as "safe screening" or "reliable elimination." The scientifically defensible contribution is an evidence audit plus a falsifiable decision baseline that reports retained-set coverage, regret, assay-cell reduction, abstention, and source-level uncertainty together.
