@@ -11,8 +11,8 @@ from pathlib import Path
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / "analysis" / "results"
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "results"
 
 TASK_ORDER = [
     ("Dataset I", "Cd (II)"),
@@ -43,8 +43,8 @@ def boolean(series: pd.Series) -> pd.Series:
 
 
 def verify_protocol() -> str:
-    protocol = ROOT / "analysis/protocols/candidate_retention_protocol_v1.json"
-    checksum = ROOT / "analysis/protocols/candidate_retention_protocol_v1.sha256"
+    protocol = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
+    checksum = ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
     observed = hashlib.sha256(protocol.read_bytes()).hexdigest()
     expected = checksum.read_text(encoding="utf-8").split()[0]
     if observed != expected:
@@ -196,7 +196,7 @@ def verify_candidate_panels() -> dict[str, float | int]:
 
 
 def verify_external_screen() -> dict[str, int]:
-    directory = ROOT / "analysis/data/external_panels"
+    directory = ROOT / "data/external_panels"
     registry = pd.read_csv(directory / "screening_registry.csv")
     panels = pd.read_csv(directory / "panel_responses.csv")
     audit = pd.read_csv(directory / "panel_audit.csv")

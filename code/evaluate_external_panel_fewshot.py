@@ -14,13 +14,13 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import PolynomialFeatures
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 INPUT = (
     ROOT
-    / "analysis/data/external_panels/extracted_tabulated_panels"
+    / "data/external_panels/extracted_tabulated_panels"
     / "external_shared_condition_panels.csv"
 )
-OUT = ROOT / "analysis/work/external_panel_exploration"
+OUT = ROOT / "work/external_panel_exploration"
 RIDGE_ALPHA = 1.0
 MAX_ANCHOR_SETS = 100
 

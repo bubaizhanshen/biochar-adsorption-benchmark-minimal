@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / "analysis/results/holdout"
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "results/holdout"
 MATERIAL_OOF = RESULTS / "biochar/oof_predictions.csv"
 STUDY_OOF = RESULTS / "study_block/oof_predictions.csv"
 OUTPUT = RESULTS / "common_weighting"

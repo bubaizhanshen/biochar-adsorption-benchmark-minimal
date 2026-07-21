@@ -16,12 +16,12 @@ from evaluate_external_candidate_retention import (
 from evaluate_external_panel_fewshot import boundary_pair, design_table
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 INPUT = (
     ROOT
-    / "analysis/data/external_panels/panel_responses.csv"
+    / "data/external_panels/panel_responses.csv"
 )
-OUT = ROOT / "analysis/results/staged_retention"
+OUT = ROOT / "results/staged_retention"
 HAZARD_FOCUSED = {"Pb(II)", "Cd(II)", "Zn(II)", "17beta-estradiol"}
 
 

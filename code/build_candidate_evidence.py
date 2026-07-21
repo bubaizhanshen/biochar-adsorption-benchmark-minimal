@@ -12,23 +12,21 @@ import pandas as pd
 from run_biochar_holdout import load_task
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = (
     ROOT
-    / "analysis"
     / "results"
     / "candidate_panels"
     / "manifest.csv"
 )
 DEFAULT_FULL_PREDICTIONS = (
-    ROOT / "analysis/results/candidate_panels/full_model/predictions.csv"
+    ROOT / "results/candidate_panels/full_model/predictions.csv"
 )
 DEFAULT_FULL_SUMMARY = (
-    ROOT / "analysis/results/candidate_panels/full_model/panel_summary.csv"
+    ROOT / "results/candidate_panels/full_model/panel_summary.csv"
 )
 DEFAULT_CONDITION_ONLY = (
     ROOT
-    / "analysis"
     / "results"
     / "candidate_panels"
     / "condition_only_model"
@@ -36,7 +34,6 @@ DEFAULT_CONDITION_ONLY = (
 )
 DEFAULT_SOURCE_SUMMARY = (
     ROOT
-    / "analysis"
     / "results"
     / "holdout"
     / "study_block"
@@ -44,7 +41,6 @@ DEFAULT_SOURCE_SUMMARY = (
 )
 DEFAULT_OUT = (
     ROOT
-    / "analysis"
     / "results"
     / "candidate_panels"
     / "evidence"

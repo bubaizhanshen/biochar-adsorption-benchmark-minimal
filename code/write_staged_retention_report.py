@@ -10,10 +10,10 @@ from pathlib import Path
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / "analysis/results/staged_retention"
-PROTOCOL = ROOT / "analysis/protocols/candidate_retention_protocol_v1.json"
-CHECKSUM = ROOT / "analysis/protocols/candidate_retention_protocol_v1.sha256"
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS = ROOT / "results/staged_retention"
+PROTOCOL = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
+CHECKSUM = ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
 REPORT = RESULTS / "README.md"
 
 

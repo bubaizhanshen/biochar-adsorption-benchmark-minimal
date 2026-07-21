@@ -16,17 +16,17 @@ from evaluate_external_candidate_retention import (
 from evaluate_external_panel_fewshot import boundary_pair, design_table
 
 
-ROOT = Path(__file__).resolve().parents[2]
-PROTOCOL = ROOT / "analysis/protocols/candidate_retention_protocol_v1.json"
+ROOT = Path(__file__).resolve().parents[1]
+PROTOCOL = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
 PROTOCOL_CHECKSUM = (
-    ROOT / "analysis/protocols/candidate_retention_protocol_v1.sha256"
+    ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
 )
 INPUT = (
     ROOT
-    / "analysis/data/external_panels"
+    / "data/external_panels"
     / "panel_responses.csv"
 )
-OUT = ROOT / "analysis/results/staged_retention"
+OUT = ROOT / "results/staged_retention"
 STRATEGIES = (
     ("ever_top_one_third", 1 / 3),
     ("ever_top_half_frozen_primary", 1 / 2),

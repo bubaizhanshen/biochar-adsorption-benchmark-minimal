@@ -17,7 +17,7 @@ The first two targets assess response prediction under different distribution sh
 
 The benchmark contains three source tables with explicit source-specific material labels: 5,964 input rows in total. Eligibility, provenance, and complete-case requirements retained 3,512 records across 10 pollutant-specific tasks, 146 reported material groups, and 146 outer biochar-holdout folds. Six tasks also supported 30 study-block folds. Dataset IV from the broader data audit is not included because it did not retain an explicit material identifier and was not used for material-, study-block-, or candidate-panel inference.
 
-The staged-retention screen documents 63 metadata or repository records. Six records supplied 14 primary panels and 488 directly tabulated candidate-condition responses; one additional record supplied sensitivity-only panels. The other 56 records were excluded for documented structural or provenance reasons. The complete screening flow is described in `analysis/data/external_panels/README.md`.
+The staged-retention screen documents 63 metadata or repository records. Six records supplied 14 primary panels and 488 directly tabulated candidate-condition responses; one additional record supplied sensitivity-only panels. The other 56 records were excluded for documented structural or provenance reasons. The complete screening flow is described in `data/external_panels/README.md`.
 
 ## Current numerical results
 
@@ -34,27 +34,27 @@ Candidate-label permutations apply one mapping consistently across every conditi
 ## Repository layout
 
 ```text
-analysis/
+.
 ├── data/
 │   ├── benchmark/                    # three released adsorption tables
-│   └── external_panels/              # screening registry and panel responses
-├── protocols/                        # frozen candidate-retention rule
-├── registries/                       # source-linked material-group audit
-├── results/
-│   ├── holdout/
-│   │   ├── biochar/
-│   │   ├── study_block/
-│   │   ├── common_weighting/
-│   │   └── inner_grouping_sensitivity/
-│   ├── candidate_panels/
-│   │   ├── full_model/
-│   │   ├── condition_only_model/
-│   │   └── evidence/
-│   └── staged_retention/
-└── scripts/
+│   ├── external_panels/              # screening registry and panel responses
+│   ├── protocols/                    # frozen candidate-retention rule
+│   └── registries/                   # source-linked material-group audit
+├── code/                              # analysis and verification scripts
+└── results/
+    ├── holdout/
+    │   ├── biochar/
+    │   ├── study_block/
+    │   ├── common_weighting/
+    │   └── inner_grouping_sensitivity/
+    ├── candidate_panels/
+    │   ├── full_model/
+    │   ├── condition_only_model/
+    │   └── evidence/
+    └── staged_retention/
 ```
 
-Temporary model-search shards and logs are written under the ignored `analysis/work/` directory, not under released results.
+Temporary model-search shards and logs are written under the ignored `work/` directory, not under released results.
 
 Stable CSV fields such as `source_study_id`, `n_source_studies`, and `source_balanced_predictive_q2` denote reconstructed study blocks. They do not establish independent laboratories, physical batches, or source families.
 
@@ -71,21 +71,21 @@ pip install -r requirements.txt
 ## Numerical audit
 
 ```bash
-python analysis/scripts/verify_release.py
+python code/verify_release.py
 ```
 
-The verifier checks the protocol checksum, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `analysis/results/release_audit_report.md` and exits with status 0.
+The verifier checks the protocol checksum, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `results/release_audit_report.md` and exits with status 0.
 
 ## Reproduce summary analyses
 
 These commands use the supplied OOF predictions and panel fits without repeating model search:
 
 ```bash
-python analysis/scripts/compute_holdout_common_weighting.py
-python analysis/scripts/compare_inner_grouping.py
-python analysis/scripts/build_candidate_evidence.py
-python analysis/scripts/evaluate_retention_comparators.py
-python analysis/scripts/verify_release.py
+python code/compute_holdout_common_weighting.py
+python code/compare_inner_grouping.py
+python code/build_candidate_evidence.py
+python code/evaluate_retention_comparators.py
+python code/verify_release.py
 ```
 
 ## Re-run nested model selection
@@ -93,37 +93,37 @@ python analysis/scripts/verify_release.py
 Each manifest row is an independent outer-fold or panel job. Run every manifest ID before merging.
 
 ```bash
-python analysis/scripts/run_biochar_holdout.py --write-manifest
-python analysis/scripts/run_biochar_holdout.py --array-id 1
-python analysis/scripts/run_biochar_holdout.py --merge-shards
+python code/run_biochar_holdout.py --write-manifest
+python code/run_biochar_holdout.py --array-id 1
+python code/run_biochar_holdout.py --merge-shards
 
-python analysis/scripts/run_study_block_holdout.py --write-manifest
-python analysis/scripts/run_study_block_holdout.py --array-id 1
-python analysis/scripts/run_study_block_holdout.py --merge-shards
+python code/run_study_block_holdout.py --write-manifest
+python code/run_study_block_holdout.py --array-id 1
+python code/run_study_block_holdout.py --merge-shards
 ```
 
 The study-block-grouped inner analysis is the default. Run the material-grouped sensitivity in separate work and result directories:
 
 ```bash
-python analysis/scripts/run_study_block_holdout.py \
+python code/run_study_block_holdout.py \
   --array-id 1 \
   --inner-grouping material \
-  --shard-dir analysis/work/inner_grouping_sensitivity/shards
+  --shard-dir work/inner_grouping_sensitivity/shards
 
-python analysis/scripts/run_study_block_holdout.py \
+python code/run_study_block_holdout.py \
   --merge-shards \
-  --shard-dir analysis/work/inner_grouping_sensitivity/shards \
-  --out-dir analysis/results/holdout/inner_grouping_sensitivity
+  --shard-dir work/inner_grouping_sensitivity/shards \
+  --out-dir results/holdout/inner_grouping_sensitivity
 ```
 
 Candidate-panel fits use the same group-balanced MAE selection objective:
 
 ```bash
-python analysis/scripts/evaluate_simultaneous_candidate_panels.py --panel-id 1
-python analysis/scripts/evaluate_condition_only_candidate_panels.py --panel-id 1
-python analysis/scripts/evaluate_simultaneous_candidate_panels.py --merge-shards
-python analysis/scripts/evaluate_condition_only_candidate_panels.py --merge-shards
-python analysis/scripts/build_candidate_evidence.py
+python code/evaluate_simultaneous_candidate_panels.py --panel-id 1
+python code/evaluate_condition_only_candidate_panels.py --panel-id 1
+python code/evaluate_simultaneous_candidate_panels.py --merge-shards
+python code/evaluate_condition_only_candidate_panels.py --merge-shards
+python code/build_candidate_evidence.py
 ```
 
 Panels 5 and 8 are sensitivity panels. The primary candidate analysis uses the 10 complete single-study-block panels.

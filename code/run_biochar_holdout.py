@@ -27,11 +27,11 @@ from modeling_core import (  # noqa: E402
 )
 
 
-ROOT = Path(__file__).resolve().parents[2]
-REGISTRY_DIR = ROOT / "analysis/registries"
-DEFAULT_MANIFEST = ROOT / "analysis/results/holdout/biochar/manifest.csv"
-DEFAULT_SHARDS = ROOT / "analysis/work/biochar_holdout/shards"
-DEFAULT_OUT = ROOT / "analysis/results/holdout/biochar"
+ROOT = Path(__file__).resolve().parents[1]
+REGISTRY_DIR = ROOT / "data/registries"
+DEFAULT_MANIFEST = ROOT / "results/holdout/biochar/manifest.csv"
+DEFAULT_SHARDS = ROOT / "work/biochar_holdout/shards"
+DEFAULT_OUT = ROOT / "results/holdout/biochar"
 
 
 TASKS = [

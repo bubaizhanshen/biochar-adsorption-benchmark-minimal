@@ -12,10 +12,10 @@ from modeling_core import DATASETS, fit_best_search
 from run_biochar_holdout import load_task
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MANIFEST = ROOT / "analysis/results/candidate_panels/manifest.csv"
-DEFAULT_SHARDS = ROOT / "analysis/work/candidate_panels/condition_only_model_shards"
-DEFAULT_OUT = ROOT / "analysis/results/candidate_panels/condition_only_model"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MANIFEST = ROOT / "results/candidate_panels/manifest.csv"
+DEFAULT_SHARDS = ROOT / "work/candidate_panels/condition_only_model_shards"
+DEFAULT_OUT = ROOT / "results/candidate_panels/condition_only_model"
 
 
 def as_boolean(series: pd.Series) -> pd.Series:

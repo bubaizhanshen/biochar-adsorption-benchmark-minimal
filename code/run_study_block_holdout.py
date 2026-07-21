@@ -12,10 +12,10 @@ from modeling_core import DATASETS, fit_best_search
 from run_biochar_holdout import TASKS, load_task
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MANIFEST = ROOT / "analysis/results/holdout/study_block/manifest.csv"
-DEFAULT_SHARDS = ROOT / "analysis/work/study_block_holdout/shards"
-DEFAULT_OUT = ROOT / "analysis/results/holdout/study_block"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_MANIFEST = ROOT / "results/holdout/study_block/manifest.csv"
+DEFAULT_SHARDS = ROOT / "work/study_block_holdout/shards"
+DEFAULT_OUT = ROOT / "results/holdout/study_block"
 
 
 def source_metrics(frame: pd.DataFrame, group_column: str) -> dict[str, float]:

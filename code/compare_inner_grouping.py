@@ -5,15 +5,15 @@ from pathlib import Path
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 PRIMARY = (
     ROOT
-    / "analysis/results/holdout/study_block"
+    / "results/holdout/study_block"
     / "task_summary.csv"
 )
 SENSITIVITY_DIR = (
     ROOT
-    / "analysis/results/holdout/inner_grouping_sensitivity"
+    / "results/holdout/inner_grouping_sensitivity"
 )
 SENSITIVITY = SENSITIVITY_DIR / "task_summary.csv"
 OUTPUT = SENSITIVITY_DIR / "inner_grouping_comparison.csv"

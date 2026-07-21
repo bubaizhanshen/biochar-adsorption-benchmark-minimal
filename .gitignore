@@ -3,4 +3,4 @@ __pycache__/
 *.py[cod]
 *.tiff
 .DS_Store
-analysis/work/
+work/

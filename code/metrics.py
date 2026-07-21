@@ -7,8 +7,8 @@ import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_INPUT = ROOT / "analysis/results/holdout/biochar"
+ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_INPUT = ROOT / "results/holdout/biochar"
 
 
 GROUPING_STATUS = {

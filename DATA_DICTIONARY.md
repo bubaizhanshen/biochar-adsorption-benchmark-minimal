@@ -2,7 +2,7 @@
 
 ## Identity registries
 
-Files in `analysis/registries/` link source-table rows to reconstructed study blocks and source-specific material labels.
+Files in `data/registries/` link source-table rows to reconstructed study blocks and source-specific material labels.
 
 | Field | Meaning |
 | --- | --- |
@@ -31,7 +31,7 @@ Row-weighted inner R2, MAE, and RMSE fields are retained as diagnostics, not as 
 
 ### Biochar holdout
 
-Directory: `analysis/results/holdout/biochar/`
+Directory: `results/holdout/biochar/`
 
 | File | Contents |
 | --- | --- |
@@ -47,9 +47,9 @@ Important prediction fields are `dataset`, `contaminant`, `task_row_id`, `source
 
 ### Study-block holdout
 
-Primary directory: `analysis/results/holdout/study_block/`
+Primary directory: `results/holdout/study_block/`
 
-Material-inner sensitivity: `analysis/results/holdout/inner_grouping_sensitivity/`
+Material-inner sensitivity: `results/holdout/inner_grouping_sensitivity/`
 
 Both directories use the generic files `oof_predictions.csv`, `fold_diagnostics.csv`, `model_candidates.csv`, and `task_summary.csv`. The primary analysis groups inner validation folds by study block; the sensitivity analysis groups inner folds by material while leaving the outer test folds unchanged.
 
@@ -57,7 +57,7 @@ Fields beginning with `source_`, including `source_study_id`, `n_source_studies`
 
 ### Common-weight comparison
 
-Directory: `analysis/results/holdout/common_weighting/`
+Directory: `results/holdout/common_weighting/`
 
 | File | Contents |
 | --- | --- |
@@ -68,7 +68,7 @@ The headline comparison uses `study_balanced_q2_biochar`, `study_balanced_q2_stu
 
 ## Candidate-panel results
 
-Directory: `analysis/results/candidate_panels/`
+Directory: `results/candidate_panels/`
 
 `manifest.csv` defines 12 jointly omitted panel fits. Panels 5 and 8 are sensitivity panels; the other 10 are complete single-study-block panels.
 
@@ -87,7 +87,7 @@ Directory: `analysis/results/candidate_panels/`
 
 ### Candidate evidence
 
-Directory: `analysis/results/candidate_panels/evidence/`
+Directory: `results/candidate_panels/evidence/`
 
 | File | Contents |
 | --- | --- |
@@ -117,7 +117,7 @@ Ordering inference applies one candidate-label mapping consistently to every mat
 
 ## Archived panel data
 
-Directory: `analysis/data/external_panels/`
+Directory: `data/external_panels/`
 
 | File | Contents |
 | --- | --- |
@@ -131,7 +131,7 @@ The screen is targeted and non-probabilistic. Registry counts describe the docum
 
 ## Staged-retention results
 
-Directory: `analysis/results/staged_retention/`
+Directory: `results/staged_retention/`
 
 | File | Contents |
 | --- | --- |

@@ -9,17 +9,17 @@ import numpy as np
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 PANELS = (
     ROOT
-    / "analysis/data/external_panels/extracted_tabulated_panels"
+    / "data/external_panels/extracted_tabulated_panels"
     / "external_shared_condition_panels.csv"
 )
 ANCHORS = (
     ROOT
-    / "analysis/work/external_panel_exploration/external_fewshot_all_anchor_sets.csv"
+    / "work/external_panel_exploration/external_fewshot_all_anchor_sets.csv"
 )
-OUT = ROOT / "analysis/work/external_panel_exploration"
+OUT = ROOT / "work/external_panel_exploration"
 
 
 def pareto_retained(support: pd.DataFrame) -> list[str]:

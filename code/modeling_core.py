@@ -16,9 +16,9 @@ from sklearn.model_selection import GridSearchCV, GroupKFold, KFold, LeaveOneGro
 from xgboost import XGBRegressor
 
 
-ROOT = Path(__file__).resolve().parents[2]
-INPUT_DIR = ROOT / "analysis/data/benchmark"
-DEFAULT_OUT_DIR = ROOT / "analysis/work/model_selection_checks"
+ROOT = Path(__file__).resolve().parents[1]
+INPUT_DIR = ROOT / "data/benchmark"
+DEFAULT_OUT_DIR = ROOT / "work/model_selection_checks"
 
 MANUSCRIPT_ORDER = [
     ("Dataset I", "Cd (II)"),
@@ -113,7 +113,7 @@ DATASETS = OrderedDict(
         "Dataset I": DatasetConfig(
             key="HM2",
             label="Dataset I",
-            file="analysis/data/benchmark/HM2.xlsx",
+            file="data/benchmark/HM2.xlsx",
             task_col="HM",
             target_col="Eta",
             group_mode="adsorbent",
@@ -131,7 +131,7 @@ DATASETS = OrderedDict(
         "Dataset II": DatasetConfig(
             key="HMI_data",
             label="Dataset II",
-            file="analysis/data/benchmark/HMI_data.xlsx",
+            file="data/benchmark/HMI_data.xlsx",
             task_col="Metal type",
             target_col="qe",
             group_mode="adsorbent",
@@ -170,7 +170,7 @@ DATASETS = OrderedDict(
         "Dataset III": DatasetConfig(
             key="EC",
             label="Dataset III",
-            file="analysis/data/benchmark/EC.xlsx",
+            file="data/benchmark/EC.xlsx",
             task_col="Pollutant",
             target_col="Capacity",
             group_mode="adsorbent",
