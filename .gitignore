@@ -3,12 +3,4 @@ __pycache__/
 *.py[cod]
 *.tiff
 .DS_Store
-reanalysis/results/material_holdout_shards/
-reanalysis/results/source_study_holdout_shards/
-reanalysis/results/source_inner_material_sensitivity_shards/
-reanalysis/results/source_inner_material_sensitivity_logs/
-# Legacy local job directories retained outside the release tree.
-reanalysis/results/source_inner_source_sensitivity_shards/
-reanalysis/results/source_inner_source_sensitivity_logs/
-reanalysis/results/candidate_panel_benchmark_10_tasks/full_shards/
-reanalysis/results/candidate_panel_benchmark_10_tasks/condition_only_shards/
+analysis/work/

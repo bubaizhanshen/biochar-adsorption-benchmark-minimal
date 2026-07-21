@@ -1,22 +1,22 @@
 PYTHON ?= python
 
-.PHONY: verify locked common-weighting candidate-evidence comparators
+.PHONY: verify staged-retention common-weighting candidate-evidence comparators
 
 verify:
-	$(PYTHON) reanalysis/scripts/verify_release.py
+	$(PYTHON) analysis/scripts/verify_release.py
 
-locked:
-	$(PYTHON) reanalysis/scripts/evaluate_locked_retention_protocol.py
-	$(PYTHON) reanalysis/scripts/evaluate_locked_retention_sensitivity.py
-	$(PYTHON) reanalysis/scripts/evaluate_retention_comparators.py
-	$(PYTHON) reanalysis/scripts/write_locked_protocol_report.py
-	$(PYTHON) reanalysis/scripts/verify_release.py
+staged-retention:
+	$(PYTHON) analysis/scripts/evaluate_staged_retention.py
+	$(PYTHON) analysis/scripts/evaluate_staged_retention_sensitivity.py
+	$(PYTHON) analysis/scripts/evaluate_retention_comparators.py
+	$(PYTHON) analysis/scripts/write_staged_retention_report.py
+	$(PYTHON) analysis/scripts/verify_release.py
 
 common-weighting:
-	$(PYTHON) reanalysis/scripts/compute_holdout_common_weighting.py
+	$(PYTHON) analysis/scripts/compute_holdout_common_weighting.py
 
 candidate-evidence:
-	$(PYTHON) reanalysis/scripts/build_candidate_evidence.py
+	$(PYTHON) analysis/scripts/build_candidate_evidence.py
 
 comparators:
-	$(PYTHON) reanalysis/scripts/evaluate_retention_comparators.py
+	$(PYTHON) analysis/scripts/evaluate_retention_comparators.py
