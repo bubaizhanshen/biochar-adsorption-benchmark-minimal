@@ -146,6 +146,7 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
         split_kind="LOBO",
         seed=26000 + panel_id,
         n_jobs=n_jobs,
+        selection_metric="group_mae",
     )
     prediction = np.asarray(best["best_estimator"].predict(x.iloc[test_index]), dtype=float)
     train_mean = float(y.iloc[train_index].mean())
@@ -185,6 +186,9 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
                 "inner_cv_r2": best["best_cv_r2"],
                 "inner_cv_mae": best["best_cv_mae"],
                 "inner_cv_rmse": best["best_cv_rmse"],
+                "inner_cv_group_mae": best["best_cv_group_mae"],
+                "inner_cv_group_rmse": best["best_cv_group_rmse"],
+                "selection_metric": best["selection_metric"],
             }
         ]
     )
@@ -251,6 +255,10 @@ def merge_shards(
         raise RuntimeError("Merged diagnostics do not contain one row per candidate panel.")
     if predictions["panel_id"].nunique() != expected:
         raise RuntimeError("Merged predictions do not cover every candidate panel.")
+    if not diagnostics["selection_metric"].eq("group_mae").all():
+        raise RuntimeError(
+            "At least one candidate panel did not use group-balanced MAE selection."
+        )
     stratum_rows: list[dict[str, object]] = []
     cell_frames: list[pd.DataFrame] = []
     panel_rows: list[dict[str, object]] = []

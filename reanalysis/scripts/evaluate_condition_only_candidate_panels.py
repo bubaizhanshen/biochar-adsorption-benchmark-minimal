@@ -60,6 +60,7 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
         split_kind="LOBO",
         seed=41000 + panel_id,
         n_jobs=n_jobs,
+        selection_metric="group_mae",
     )
     prediction = np.asarray(best["best_estimator"].predict(x.iloc[test_index]), dtype=float)
     train_mean = float(y.iloc[train_index].mean())
@@ -100,6 +101,9 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
                 "inner_cv_r2": best["best_cv_r2"],
                 "inner_cv_mae": best["best_cv_mae"],
                 "inner_cv_rmse": best["best_cv_rmse"],
+                "inner_cv_group_mae": best["best_cv_group_mae"],
+                "inner_cv_group_rmse": best["best_cv_group_rmse"],
+                "selection_metric": best["selection_metric"],
             }
         ]
     )
@@ -132,6 +136,10 @@ def merge_shards(manifest_path: Path, shard_dir: Path, out_dir: Path) -> None:
         raise RuntimeError("Condition-only predictions do not cover every candidate panel.")
     if diagnostics["panel_id"].nunique() != expected:
         raise RuntimeError("Condition-only diagnostics do not cover every candidate panel.")
+    if not diagnostics["selection_metric"].eq("group_mae").all():
+        raise RuntimeError(
+            "At least one condition-only fit did not use group-balanced MAE selection."
+        )
     out_dir.mkdir(parents=True, exist_ok=True)
     predictions.sort_values(["panel_id", "task_row_id"]).to_csv(
         out_dir / "condition_only_candidate_panel_predictions.csv", index=False

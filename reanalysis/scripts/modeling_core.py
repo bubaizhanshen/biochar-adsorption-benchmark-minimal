@@ -74,6 +74,40 @@ class DatasetConfig:
     ac_cols: tuple[str, ...]
 
 
+@dataclass
+class GroupBalancedErrorScorer:
+    """Return a fold contribution to an across-group validation loss.
+
+    GridSearchCV averages fold scores. Scaling each fold's group-error sum by
+    ``n_splits / n_groups`` makes that average equal the mean error across all
+    validation groups, even when folds contain different numbers of groups.
+    """
+
+    groups: pd.Series
+    metric: str
+    n_splits: int
+
+    def __call__(self, estimator, x_test: pd.DataFrame, y_test: pd.Series) -> float:
+        prediction = np.asarray(estimator.predict(x_test), dtype=float)
+        observed = np.asarray(y_test, dtype=float)
+        aligned_groups = self.groups.reindex(x_test.index)
+        if aligned_groups.isna().any():
+            raise RuntimeError(
+                "Inner-fold group labels could not be aligned to validation rows."
+            )
+        fold_groups = aligned_groups.astype(str).to_numpy()
+
+        error = np.abs(observed - prediction)
+        if self.metric == "mse":
+            error = (observed - prediction) ** 2
+        group_error = pd.DataFrame(
+            {"group": fold_groups, "error": error}
+        ).groupby("group", sort=False)["error"].mean()
+        total_groups = int(self.groups.astype(str).nunique())
+        value = float(group_error.sum() * self.n_splits / total_groups)
+        return -value
+
+
 DATASETS = OrderedDict(
     {
         "Dataset I": DatasetConfig(
@@ -377,13 +411,31 @@ def run_stage_search(
     seed: int,
     n_jobs: int,
     stage_name: str,
+    selection_metric: str = "r2",
 ) -> dict[str, object]:
     inner_cv = build_inner_cv(split_kind, len(x_train), groups_train, seed)
+    if selection_metric == "group_mae":
+        n_splits = int(inner_cv.get_n_splits(x_train, y_train, groups_train))
+        scoring = {
+            **SCORING,
+            "group_mae": GroupBalancedErrorScorer(
+                groups_train.copy(), "mae", n_splits
+            ),
+            "group_mse": GroupBalancedErrorScorer(
+                groups_train.copy(), "mse", n_splits
+            ),
+        }
+        refit = "group_mae"
+    elif selection_metric == "r2":
+        scoring = SCORING
+        refit = "r2"
+    else:
+        raise ValueError(f"Unsupported selection metric: {selection_metric}")
     search = GridSearchCV(
         estimator=spec.estimator_factory(),
         param_grid=grid,
-        scoring=SCORING,
-        refit="r2",
+        scoring=scoring,
+        refit=refit,
         cv=inner_cv,
         n_jobs=n_jobs,
         error_score="raise",
@@ -391,15 +443,27 @@ def run_stage_search(
     fit_kwargs = {"groups": groups_train} if split_kind == "LOBO" else {}
     search.fit(x_train, y_train, **fit_kwargs)
     best_idx = int(search.best_index_)
-    return {
+    output = {
         "stage": stage_name,
         "model_name": spec.name,
+        "selection_metric": selection_metric,
         "best_cv_r2": float(search.cv_results_["mean_test_r2"][best_idx]),
         "best_cv_mae": float(-search.cv_results_["mean_test_mae"][best_idx]),
         "best_cv_rmse": float(-search.cv_results_["mean_test_rmse"][best_idx]),
         "best_params": params_to_text(search.best_params_),
         "best_estimator": search.best_estimator_,
     }
+    if selection_metric == "group_mae":
+        output["best_cv_group_mae"] = float(
+            -search.cv_results_["mean_test_group_mae"][best_idx]
+        )
+        output["best_cv_group_rmse"] = float(
+            np.sqrt(-search.cv_results_["mean_test_group_mse"][best_idx])
+        )
+    else:
+        output["best_cv_group_mae"] = np.nan
+        output["best_cv_group_rmse"] = np.nan
+    return output
 
 
 def fit_best_search(
@@ -409,6 +473,7 @@ def fit_best_search(
     split_kind: str,
     seed: int,
     n_jobs: int,
+    selection_metric: str = "r2",
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
     candidate_rows: list[dict[str, object]] = []
     coarse_best: dict[str, object] | None = None
@@ -425,6 +490,7 @@ def fit_best_search(
             seed=seed,
             n_jobs=n_jobs,
             stage_name="coarse",
+            selection_metric=selection_metric,
         )
         candidate_rows.append({k: v for k, v in row.items() if k != "best_estimator"})
 
@@ -432,9 +498,23 @@ def fit_best_search(
             coarse_best = row
             winner_spec = spec
             continue
-        better_r2 = row["best_cv_r2"] > coarse_best["best_cv_r2"]
-        tie_break = np.isclose(row["best_cv_r2"], coarse_best["best_cv_r2"]) and row["best_cv_rmse"] < coarse_best["best_cv_rmse"]
-        if better_r2 or tie_break:
+        if selection_metric == "group_mae":
+            better = row["best_cv_group_mae"] < coarse_best["best_cv_group_mae"]
+            tie_break = (
+                np.isclose(
+                    row["best_cv_group_mae"],
+                    coarse_best["best_cv_group_mae"],
+                )
+                and row["best_cv_group_rmse"]
+                < coarse_best["best_cv_group_rmse"]
+            )
+        else:
+            better = row["best_cv_r2"] > coarse_best["best_cv_r2"]
+            tie_break = (
+                np.isclose(row["best_cv_r2"], coarse_best["best_cv_r2"])
+                and row["best_cv_rmse"] < coarse_best["best_cv_rmse"]
+            )
+        if better or tie_break:
             coarse_best = row
             winner_spec = spec
 
@@ -451,6 +531,7 @@ def fit_best_search(
         seed=seed + 10000,
         n_jobs=n_jobs,
         stage_name="refined",
+        selection_metric=selection_metric,
     )
     candidate_rows.append({k: v for k, v in refined.items() if k != "best_estimator"})
     return refined, candidate_rows

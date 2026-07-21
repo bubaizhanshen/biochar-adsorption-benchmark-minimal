@@ -148,15 +148,13 @@ def run_array_fold(
     cfg = DATASETS[dataset]
     x = task[features]
     y = task[cfg.target_col].astype(float)
-    if inner_grouping == "material":
-        groups = task["material_group_code"].astype(int)
-        selection_source = "nested material-group-preserving model selection"
-    elif inner_grouping == "source":
+    if inner_grouping == "study":
         groups = pd.Series(
             pd.factorize(task["source_study_id"].astype(str), sort=False)[0],
             index=task.index,
         )
-        selection_source = "nested source-study-group-preserving model selection"
+    elif inner_grouping == "material":
+        groups = task["material_group_code"].astype(int)
     else:
         raise ValueError(f"Unsupported inner grouping: {inner_grouping}")
     if int(groups.iloc[train_index].nunique()) < 2:
@@ -168,6 +166,7 @@ def run_array_fold(
         split_kind="LOBO",
         seed=33000 + int(row["task_order"]) * 100 + int(row["fold_id"]),
         n_jobs=n_jobs,
+        selection_metric="group_mae",
     )
     prediction = np.asarray(best["best_estimator"].predict(x.iloc[test_index]), dtype=float)
     train_mean = float(y.iloc[train_index].mean())
@@ -210,9 +209,16 @@ def run_array_fold(
                 "inner_cv_r2": best["best_cv_r2"],
                 "inner_cv_mae": best["best_cv_mae"],
                 "inner_cv_rmse": best["best_cv_rmse"],
+                "inner_cv_group_mae": best["best_cv_group_mae"],
+                "inner_cv_group_rmse": best["best_cv_group_rmse"],
+                "selection_metric": best["selection_metric"],
+                "inner_grouping": inner_grouping,
                 "test_mae": float(mean_absolute_error(y_test, prediction)),
                 "test_rmse": float(np.sqrt(mean_squared_error(y_test, prediction))),
-                "selection_source": selection_source,
+                "selection_source": (
+                    f"nested {inner_grouping}-group-preserving selection by "
+                    "mean group-balanced MAE"
+                ),
             }
         ]
     )
@@ -261,6 +267,10 @@ def merge_shards(
         raise RuntimeError("Merged source-study predictions do not cover every fold.")
     if diagnostics["array_id"].nunique() != expected:
         raise RuntimeError("Merged source-study diagnostics do not cover every fold.")
+    if not diagnostics["selection_metric"].eq("group_mae").all():
+        raise RuntimeError(
+            "At least one study-block fold did not use group-balanced MAE selection."
+        )
 
     summaries: list[dict[str, object]] = []
     for task_number, ((dataset, contaminant), task) in enumerate(
@@ -306,15 +316,16 @@ def merge_shards(
     diagnostics.to_csv(out_dir / "source_study_holdout_fold_diagnostics.csv", index=False)
     candidates.to_csv(out_dir / "source_study_holdout_model_candidates.csv", index=False)
     summary.to_csv(out_dir / "source_study_holdout_summary.csv", index=False)
-    selection_source = str(diagnostics["selection_source"].dropna().iloc[0])
     report = [
-        "# Source-study holdout benchmark",
+        "# Study-block holdout benchmark",
         "",
-        "Each outer fold excludes all records from one reconstructed source study.",
-        f"Inner selection: {selection_source}.",
+        (
+            "Each outer fold excludes all records from one reconstructed study block. "
+            "Inner candidates were selected by mean group-balanced MAE."
+        ),
         "",
-        f"- Tasks with at least three source studies: {len(summary)}",
-        f"- Source-study outer folds: {len(diagnostics)}",
+        f"- Tasks with at least three study blocks: {len(summary)}",
+        f"- Study-block outer folds: {len(diagnostics)}",
         f"- Median source-balanced predictive Q2: {summary['source_balanced_predictive_q2'].median():.3f}",
         "- Results are descriptive when tasks contain only three or four source studies.",
     ]
@@ -335,9 +346,9 @@ def main() -> None:
     parser.add_argument("--min-sources", type=int, default=3)
     parser.add_argument(
         "--inner-grouping",
-        choices=("material", "source"),
-        default="material",
-        help="Grouping unit for nested model selection within each held-source training set.",
+        choices=("study", "material"),
+        default="study",
+        help="Grouping unit for nested model selection within each held study block.",
     )
     args = parser.parse_args()
 

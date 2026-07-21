@@ -120,7 +120,7 @@ Generated {date.today().isoformat()} from the checked result tables in this dire
 
 ## Scientific question
 
-Can two boundary conditions selected without response information reduce a fixed candidate-by-condition experiment while retaining at least one observed-best candidate at the unmeasured shared conditions? The observed best is the candidate with the highest recorded mean response in the complete panel at that condition. The endpoint is a retained candidate set, not a unique winner or an absolute-response prediction.
+Can two boundary conditions selected without response information reduce a fixed candidate-by-condition experiment while retaining at least one best observed candidate at the remaining shared conditions? The best observed candidate has the highest recorded mean response in the complete panel at that condition. The endpoint is a retained candidate set, not a unique winner or an absolute-response prediction.
 
 ## Protocol integrity
 
@@ -128,29 +128,29 @@ Can two boundary conditions selected without response information reduce a fixed
 - SHA-256: `{checksum}`
 - Frozen rule: assay every fixed candidate at two maximally separated condition strata and retain the union of candidates ranked in the top half at either anchor.
 - Evaluation status: post-freeze retrospective external evaluation. It is not prospective validation.
-- Analysis unit: source study. Panels and condition strata from the same source are not treated as independent studies.
+- Analysis unit: reconstructed study block. Panels and condition strata from the same block are not treated as independent studies.
 
 ## Locked evidence base
 
-The primary evaluation contains {int(evidence.n_source_studies)} article-level source studies, {int(evidence.n_panels)} eligible panels, and {int(evidence.n_query_strata)} unmeasured query strata. It spans heavy metals, phosphate, urea, methylene blue, and 17beta-estradiol. Repository discovery was targeted rather than a probability sample.
+The primary evaluation contains {int(evidence.n_source_studies)} reconstructed study blocks, {int(evidence.n_panels)} eligible panels, and {int(evidence.n_query_strata)} nonpilot condition strata. It spans heavy metals, phosphate, urea, methylene blue, and 17beta-estradiol. Repository discovery was targeted rather than a probability sample.
 
 {markdown_table(
-    ['Source', 'Panels', 'Query strata', 'All best retained', 'Query coverage', 'Assay reduction', 'Maximum relative regret'],
+    ['Study block', 'Panels', 'Nonpilot strata', 'All best retained', 'Retention', 'Cell reduction', 'Maximum relative regret'],
     source_rows,
 )}
 
 ## Primary result
 
-The frozen rule retained every query-best candidate in {int(evidence.sources_all_query_best_retained)} of {int(evidence.n_source_studies)} source studies. At the query level, {successful_queries} of {total_queries} best candidates were retained ({percent(evidence.mean_query_best_coverage)}). Source-balanced assay-cell reduction was {percent(evidence.source_balanced_mean_assay_reduction_fraction)}, and pooled assay-cell reduction was {percent(evidence.pooled_assay_reduction_fraction)}.
+The frozen rule retained a best observed candidate at every nonpilot condition in {int(evidence.sources_all_query_best_retained)} of {int(evidence.n_source_studies)} study blocks. Across conditions, {successful_queries} of {total_queries} best observed candidates were retained ({percent(evidence.mean_query_best_coverage)}). Study-block-balanced candidate-condition cell reduction was {percent(evidence.source_balanced_mean_assay_reduction_fraction)}, and pooled cell reduction was {percent(evidence.pooled_assay_reduction_fraction)}.
 
-This result does not establish a safety guarantee or a population success rate. The six source studies were not sampled from a defined population, so the source compatibility rate is reported descriptively.
+The six study blocks were not sampled from a defined population, so these values describe the archived panels rather than a literature-wide success rate.
 
 ## Locked failures
 
-The frozen rule missed the observed-best candidate at two intermediate Pb concentrations in one Ogbuagu wheat-straw panel. These failures remain failures even though the response loss was small.
+The frozen rule missed a best observed candidate at two intermediate Pb concentrations in one Ogbuagu wheat-straw panel.
 
 {markdown_table(
-    ['Source', 'Panel', 'Condition', 'Excluded observed best', 'Raw regret', 'Regret / best', 'Range-normalized regret'],
+    ['Study block', 'Panel', 'Condition', 'Deferred best observed candidate', 'Raw regret', 'Regret / best', 'Range-normalized regret'],
     failure_rows,
 )}
 
@@ -161,11 +161,11 @@ The maximum observed response loss was {percent(evidence.max_relative_regret_to_
 Panels were split descriptively according to whether the identity of the observed best candidate changed across recorded condition strata. No performance threshold was chosen from this split.
 
 {markdown_table(
-    ['Observed best identity', 'Sources', 'Panels', 'Query strata', 'Failed queries', 'Query coverage', 'Source-balanced assay-cell reduction'],
+    ['Best observed identity', 'Study blocks', 'Panels', 'Nonpilot strata', 'Missed strata', 'Retention', 'Study-block-balanced cell reduction'],
     difficulty_rows,
 )}
 
-Nine panels from five sources contained a changing best candidate. The frozen rule retained 38 of 40 exact query-best candidates in this subset. Thus, the aggregate result is not based only on panels with one constant winner, although the only locked failure occurred in the switching-best subset.
+Nine panels from five study blocks contained a changing best candidate. The frozen rule retained a best observed candidate at 38 of 40 nonpilot conditions in this subset.
 
 ## Measurement uncertainty
 
@@ -176,11 +176,11 @@ Reported cell-level standard deviations supported Monte Carlo perturbation for {
 Only the top-half row below is the frozen primary rule. All other rows were computed after the locked data were available and are exploratory.
 
 {markdown_table(
-    ['Per-anchor rule', 'Status', 'Sources retaining all best', 'Source-balanced assay-cell reduction', 'Mean panel coverage', 'Mean normalized regret'],
+    ['Per-anchor rule', 'Status', 'Study blocks retaining all best', 'Study-block-balanced cell reduction', 'Mean panel retention', 'Mean normalized regret'],
     sensitivity_rows,
 )}
 
-The exploratory top-two-thirds rule retained all observed-best candidates in the current six sources but reduced candidate-condition assay cells by only {percent(float(sensitivity.loc[sensitivity['strategy'].eq('ever_top_two_thirds'), 'source_balanced_mean_assay_reduction_fraction'].iloc[0]))}. It is not a prospectively validated replacement for protocol v1.
+The exploratory top-two-thirds rule retained all best observed candidates in the six study blocks but reduced candidate-condition cells by only {percent(float(sensitivity.loc[sensitivity['strategy'].eq('ever_top_two_thirds'), 'source_balanced_mean_assay_reduction_fraction'].iloc[0]))}.
 
 ## Defensible application
 
@@ -196,7 +196,7 @@ It must not be used to select one universal winner, optimize preparation setting
 
 ## Release-level interpretation
 
-The locked analysis supports a bounded application claim: two shared-condition pilot assays sometimes reduce the remaining candidate-by-condition workload, but exact-best retention and assay-cell savings trade off. The observed failure rules out language such as "safe screening" or "reliable elimination." The scientifically defensible contribution is an evidence audit plus a falsifiable decision baseline that reports retained-set coverage, regret, assay-cell reduction, abstention, and source-level uncertainty together.
+The locked analysis quantifies the trade-off between retaining a best observed candidate and reducing the remaining candidate-condition matrix. It provides a reproducible decision baseline reporting retention, regret, cell reduction, and study-block heterogeneity together.
 """
     REPORT.write_text(text, encoding="utf-8")
     print(REPORT)

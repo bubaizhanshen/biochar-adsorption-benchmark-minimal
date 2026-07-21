@@ -1,65 +1,61 @@
-# Material- and source-aware evaluation of biochar adsorption models
+# Endpoint-aligned evaluation of biochar adsorption models
 
-This repository provides the data, identity registries, frozen protocol, analysis code, and numerical outputs for material- and source-aware evaluation of biochar adsorption models.
+This repository contains the data, identity registries, analysis code, frozen retention protocol, and numerical outputs for evaluating biochar adsorption models at the material, study-block, and candidate-panel levels. Manuscript files, figures, and figure-generation code are intentionally excluded.
 
-## Scientific question
+## Evaluation targets
 
-Literature adsorption tables often contain many condition-level records but comparatively few traceable biochar groups and article-level source studies. The analysis asks whether literature-trained models recover biochar-specific contrasts that persist under material and study shift, or mainly reproduce response variation associated with adsorption conditions.
+The analysis separates four questions that require different test units:
 
-The repository separates three estimands:
+1. **Biochar holdout:** predict all eligible records for one reported material group after excluding that group from training.
+2. **Study-block holdout:** predict all eligible records from one reconstructed study block after excluding that block from training.
+3. **Candidate-panel holdout:** remove a complete candidate panel jointly and compare candidates only under exactly matched recorded conditions.
+4. **Staged retention:** after measuring a fixed candidate panel at one or two pilot conditions, quantify best-observed-candidate retention, regret, and avoided candidate-condition cells.
 
-1. **Held-material response:** predict all records for one biochar while excluding that material from training.
-2. **Cross-study response:** predict all records from one source study while excluding that study from training.
-3. **Candidate ordering:** withhold all materials in a candidate panel jointly and compare them only at shared recorded conditions.
+The first two targets assess response prediction under different distribution shifts. The third assesses relative candidate ordering. The fourth is a model-free retrospective comparator for follow-up testing, not a zero-shot prediction task.
 
-These are not successive names for the same validation split. The first two estimate absolute response under different distribution shifts; the third evaluates relative material contrast for a decision.
+## Data support
 
-## Main findings encoded in this release
+The public package contains three source tables with explicit source-specific material labels: 5,964 input rows in total. Eligibility, provenance, and complete-case requirements retained 3,512 records across 10 pollutant-specific tasks, 146 reported material groups, and 146 outer biochar-holdout folds. Six tasks also supported 30 study-block folds. Dataset IV from the broader data audit is not included because it did not retain an explicit material identifier and was not used for material-, study-block-, or candidate-panel inference.
 
-- The traceable benchmark contains 3,512 records across 10 pollutant-specific tasks and 146 held-material folds.
-- Median material-balanced predictive Q2 was 0.762.
-- Six tasks supported 30 task-specific source-study folds. Median source-balanced predictive Q2 was 0.412 with material-grouped inner tuning and 0.254 in a source-grouped inner-tuning sensitivity analysis; empirical intervals remained above zero for three and two tasks, respectively.
-- Ten complete single-source candidate panels contained 85 matched-condition strata.
-- Median raw Q2 was 0.636 for full models and 0.669 for condition-only comparators.
-- Only 3 of 10 primary panels had empirical intervals above baseline for both material contrast and pairwise ordering.
+The archived staged-retention screen contains 63 metadata or repository records. Six records supplied 14 primary panels and 488 directly tabulated candidate-condition responses; one additional record supplied sensitivity-only panels. The remaining 56 records were excluded for documented structural or provenance reasons. See `reanalysis/external_sources/new_source_panels/README.md` and the complete screening registry.
 
-The result is therefore not “machine learning cannot predict adsorption.” It is that good absolute-response scores do not by themselves establish correct ordering within a jointly withheld candidate panel.
+## Current numerical results
 
-## Bounded application
+- Across 10 tasks, median material-balanced predictive Q2 under biochar holdout was 0.693; 9 point estimates were positive and 7 material-resampling intervals had lower bounds above zero.
+- Across six study-evaluable tasks, the primary study-block holdout used study-block-grouped inner selection and had a median study-balanced predictive Q2 of 0.237. Material-grouped inner selection gave 0.314 in sensitivity analysis.
+- Under identical study-block weighting for the same six tasks, median predictive Q2 was 0.492 for biochar holdout and 0.237 for study-block holdout; 5 of 6 task-level differences were negative.
+- Ten complete candidate panels contained 85 matched-condition strata. Under equal task weighting, median raw Q2 was 0.592 for full models and 0.663 for condition-only models; median pairwise accuracy was 0.596.
+- One panel met the Holm-adjusted coherent-permutation threshold for ordering, three panels had positive material-contrast Q2 intervals, and no panel met both criteria.
+- In 14 archived staged-retention panels from six study blocks, the two-condition rule retained a best observed candidate at 57 of 59 nonpilot conditions. It avoided 21.1% of pooled candidate-condition cells, or 19.8% under equal study-block weighting.
+- A one-boundary comparator retained a best observed candidate at 93.8% of nonpilot conditions and avoided 35.5% of pooled candidate-condition cells. Equal-retention random subsets had an expected retention of 69.3%.
 
-The repository also contains a frozen two-anchor retention rule for a specific laboratory situation: an investigator already has a **fixed physical panel** of at least three biochars and plans to test every candidate over at least three shared numerical condition strata.
-
-The rule:
-
-1. selects the two maximally separated available conditions without using response values;
-2. assays every candidate at those two conditions;
-3. retains the union of candidates ranked in the top half at either anchor, including cutoff ties;
-4. continues testing the retained set over the remaining condition matrix.
-
-In a post-freeze retrospective evaluation of 14 panels from six additional article-level sources, the rule retained at least one candidate tied for the highest recorded mean response in 57 of 59 query conditions while avoiding 19.8% of candidate-condition assay cells on a source-balanced basis. Both misses occurred in one Pb(II) wheat-straw panel, where the observed-best material emerged at interior concentrations. Here, “observed best” is defined only within the complete recorded panel at a given condition; assay-cell reduction is not a direct estimate of monetary cost, labor, replicate count, or wet-lab time.
-
-This procedure is a transparent pilot-assay baseline, not a zero-shot selector, safety guarantee, universal-winner rule, preparation optimizer, or replacement for confirmation experiments. It does not extrapolate to unmeasured materials or outside the prespecified condition domain. Its external panels were identified by targeted screening rather than probability sampling, so the reported performance is a bounded stress test rather than a population estimate.
+Candidate-label permutations use one mapping consistently across every condition in a panel. Exact tests are enumerated when feasible; otherwise 100,000 Monte Carlo permutations are used. Exact-test resolution depends on candidate count, so pairwise accuracy remains the primary ordering effect size and adjusted P values are interpreted with `n_candidate_materials` and `minimum_exact_permutation_p`.
 
 ## Repository layout
 
 ```text
 reanalysis/
-├── input_data/                         # three tabular adsorption datasets
-├── registries/                         # row-to-source and row-to-material identities
-├── protocols/                          # frozen candidate-retention rule and checksum
-├── external_sources/new_source_panels/ # locked panel data and source-screening registry
-├── scripts/                            # analysis and verification code
+├── input_data/                         # three released adsorption tables
+├── registries/                         # source-linked material-group audit
+├── protocols/                          # frozen two-condition retention rule
+├── external_sources/new_source_panels/ # screen registry and locked panel data
+├── scripts/                            # analysis and numerical verification
 └── results/
-    ├── merged_ibuprofen_benchmark/     # held-material, held-source, and panel evidence
+    ├── merged_ibuprofen_benchmark/
+    │   ├── material_benchmark_10_tasks/
+    │   ├── source_benchmark_10_tasks/
+    │   ├── source_inner_material_sensitivity/
+    │   └── candidate_evidence_10_tasks/
     ├── candidate_panel_benchmark_10_tasks/
+    ├── holdout_common_weighting/
     └── postfreeze_locked_retention_v1/
 ```
 
-`IBU` and `IBF` labels in the source table refer to ibuprofen records and are combined into one task. The PFAS compilation used in an earlier exploratory version is not part of the material-transfer benchmark because explicit biochar identities could not be reconstructed sufficiently for the required holdouts.
+Stable legacy CSV fields such as `source_study_id`, `n_source_studies`, and `source_balanced_predictive_q2` are retained for compatibility. In this release they denote reconstructed study blocks, not verified independent laboratories, physical batches, or source families.
 
 ## Environment
 
-Python 3.13.2 and the exact package versions in `requirements.txt` were used for this release.
+Python 3.13.2 and the pinned packages in `requirements.txt` were used for the release.
 
 ```bash
 python -m venv .venv
@@ -67,32 +63,29 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Fast numerical audit
-
-This command checks the protocol checksum, task order, OOF coverage, fold counts, candidate-panel evidence, locked failures, and headline values:
+## Numerical audit
 
 ```bash
 python reanalysis/scripts/verify_release.py
 ```
 
-A successful run writes `reanalysis/results/release_audit_report.md` and exits with status 0.
+The verifier checks the protocol checksum, task order, OOF coverage, inner-selection objective, common-weight comparisons, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `reanalysis/results/release_audit_report.md` and exits with status 0.
 
-## Re-run the locked application
+## Reproduce summary analyses
 
-The protocol evaluation is deterministic. Monte Carlo measurement-uncertainty draws use seeds derived from the frozen protocol and panel identifiers.
+The following commands use the supplied OOF predictions and panel fits and do not repeat model search:
 
 ```bash
-python reanalysis/scripts/evaluate_locked_retention_protocol.py
-python reanalysis/scripts/evaluate_locked_retention_sensitivity.py
-python reanalysis/scripts/write_locked_protocol_report.py
+python reanalysis/scripts/compute_holdout_common_weighting.py
+python reanalysis/scripts/compare_source_inner_grouping.py
+python reanalysis/scripts/build_candidate_evidence.py
+python reanalysis/scripts/evaluate_retention_comparators.py
 python reanalysis/scripts/verify_release.py
 ```
 
-The SHA-256 value in `candidate_retention_protocol_v1.sha256` must match the JSON before the evaluation runs.
+## Re-run nested model selection
 
-## Re-run the nested benchmarks
-
-The complete material benchmark contains 146 independent outer-fold jobs; the source benchmark contains 30. Each outer fold performs grouped inner model selection across random forest, XGBoost, and LightGBM. The supplied OOF predictions and model-search tables allow numerical review without repeating this expensive search.
+Each manifest row is an independent outer-fold or panel job. Run every manifest ID before merging.
 
 ```bash
 python reanalysis/scripts/run_material_holdout.py --write-manifest
@@ -104,41 +97,41 @@ python reanalysis/scripts/run_source_holdout.py --array-id 1
 python reanalysis/scripts/run_source_holdout.py --merge-shards
 ```
 
-For the source-grouped inner-tuning sensitivity, run the same source manifest with `--inner-grouping source` and separate shard/output directories, then compare the two summaries:
+The study-block-grouped inner analysis is the default. The material-grouped sensitivity must use separate paths:
 
 ```bash
-python reanalysis/scripts/run_source_holdout.py --array-id 1 --inner-grouping source --shard-dir reanalysis/results/source_inner_source_sensitivity_shards
-python reanalysis/scripts/run_source_holdout.py --merge-shards --shard-dir reanalysis/results/source_inner_source_sensitivity_shards --out-dir reanalysis/results/merged_ibuprofen_benchmark/source_inner_source_sensitivity
-python reanalysis/scripts/compare_source_inner_grouping.py
+python reanalysis/scripts/run_source_holdout.py \
+  --array-id 1 \
+  --inner-grouping material \
+  --shard-dir reanalysis/results/source_inner_material_sensitivity_shards
+
+python reanalysis/scripts/run_source_holdout.py \
+  --merge-shards \
+  --shard-dir reanalysis/results/source_inner_material_sensitivity_shards \
+  --out-dir reanalysis/results/merged_ibuprofen_benchmark/source_inner_material_sensitivity
 ```
 
-Run every manifest `array_id` before merging. The jobs are independent and can be submitted as an HPC array.
-
-Candidate-panel fits are likewise run one panel at a time:
+Candidate-panel fits use the same group-balanced MAE selection objective:
 
 ```bash
 python reanalysis/scripts/evaluate_simultaneous_candidate_panels.py --panel-id 1
 python reanalysis/scripts/evaluate_condition_only_candidate_panels.py --panel-id 1
-```
-
-After all 12 manifest panels have been run, merge each shard set and rebuild the evidence table:
-
-```bash
 python reanalysis/scripts/evaluate_simultaneous_candidate_panels.py --merge-shards
 python reanalysis/scripts/evaluate_condition_only_candidate_panels.py --merge-shards
 python reanalysis/scripts/build_candidate_evidence.py
 ```
 
-Panels 5 and 8 are retained as sensitivity analyses; the primary claim uses the 10 complete single-source panels.
+Panels 5 and 8 are sensitivity panels. The primary candidate claim uses the 10 complete single-study-block panels.
 
 ## Interpretation limits
 
-- A reconstructed source-study identifier is an article-level grouping variable, not proof of an independent laboratory, source family, or physical biochar batch.
-- Source-resampling intervals are descriptive when only three to five source studies are available.
-- Recorded condition equality does not establish equality of unreported laboratory protocols or water matrices.
-- The additional six sources were identified by targeted screening, not probability sampling.
-- The locked evaluation is post-freeze and retrospective, not a prospective wet-lab validation.
-- Measurement-uncertainty simulations are reported only when cell-level standard deviations and replicate counts were available and assume independent normal sampling errors around reported means.
-- Ranking evidence is panel- and domain-specific; it cannot justify excluding a new material without confirmation.
+- Reported material labels may conceal unreported physical batches.
+- A reconstructed study block is not proof of an independent laboratory or source family.
+- Equality of recorded conditions does not establish equality of unreported water matrices or laboratory protocols.
+- Candidate-panel inference is conditional on studies reporting complete common-condition grids.
+- Small candidate panels have coarse exact-permutation P-value resolution.
+- The archived panel search was targeted and is not a probability sample of the literature.
+- Avoided candidate-condition cells do not directly measure cost, labor, replicate count, or wet-lab time.
+- The staged-retention results are retrospective and do not establish prospective performance under environmentally relevant conditions.
 
-See `DATA_DICTIONARY.md` and `reanalysis/results/postfreeze_locked_retention_v1/LOCKED_PROTOCOL_EVALUATION.md` for field definitions and the complete failure report.
+See `DATA_DICTIONARY.md` for field-level definitions.

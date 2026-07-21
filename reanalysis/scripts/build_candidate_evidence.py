@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from itertools import combinations
+from itertools import combinations, permutations
+from math import factorial
 from pathlib import Path
 
 import numpy as np
@@ -71,6 +72,46 @@ def pairwise_accuracy(observed: np.ndarray, predicted: np.ndarray) -> float:
         else:
             scores.append(float(np.sign(observed_difference) == np.sign(predicted_difference)))
     return float(np.mean(scores)) if scores else np.nan
+
+
+def coherent_panel_permutation_scores(
+    cells: pd.DataFrame,
+    candidate_permutations: np.ndarray,
+    *,
+    chunk_size: int = 5_000,
+) -> np.ndarray:
+    """Score one candidate-label permutation consistently across all conditions."""
+    materials = sorted(cells["material_group"].astype(str).unique())
+    strata: list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = []
+    for _, stratum in cells.groupby("condition_key", sort=False):
+        stratum = stratum.sort_values("material_group")
+        if stratum["material_group"].astype(str).tolist() != materials:
+            raise RuntimeError(
+                "Candidate permutation requires a complete condition grid."
+            )
+        observed = stratum["y_true"].to_numpy(float)
+        predicted = stratum["y_pred"].to_numpy(float)
+        left, right = np.triu_indices(len(observed), k=1)
+        observed_differences = observed[left] - observed[right]
+        valid = ~np.isclose(observed_differences, 0)
+        strata.append(
+            (predicted, left[valid], right[valid], np.sign(observed_differences[valid]))
+        )
+
+    scores = np.empty(len(candidate_permutations), dtype=float)
+    for start in range(0, len(candidate_permutations), chunk_size):
+        stop = min(start + chunk_size, len(candidate_permutations))
+        permutation_chunk = candidate_permutations[start:stop]
+        stratum_scores: list[np.ndarray] = []
+        for predicted, left, right, observed_signs in strata:
+            permuted = predicted[permutation_chunk]
+            predicted_differences = permuted[:, left] - permuted[:, right]
+            ties = np.isclose(predicted_differences, 0)
+            correct = np.sign(predicted_differences) == observed_signs
+            pair_scores = np.where(ties, 0.5, correct.astype(float))
+            stratum_scores.append(np.mean(pair_scores, axis=1))
+        scores[start:stop] = np.mean(np.vstack(stratum_scores), axis=0)
+    return scores
 
 
 def equal_stratum_metrics(cells: pd.DataFrame, prediction_column: str) -> dict[str, float]:
@@ -179,6 +220,7 @@ def paired_incremental_metrics(
     *,
     seed: int,
     n_resamples: int = 2000,
+    n_permutations: int = 100000,
 ) -> dict[str, float]:
     """Quantify material-descriptor gain with complete-stratum paired resampling."""
     keys = ["condition_key", "material_group"]
@@ -242,22 +284,34 @@ def paired_incremental_metrics(
     pairwise_boot = np.nanmean(
         strata["pairwise_difference_mae"].to_numpy(float)[sampled], axis=1
     )
-    null_by_stratum: list[np.ndarray] = []
-    for observed, predicted in stratum_arrays:
-        left, right = np.triu_indices(len(observed), k=1)
-        observed_differences = observed[left] - observed[right]
-        valid = ~np.isclose(observed_differences, 0)
-        random_orders = np.argsort(rng.random((n_resamples, len(predicted))), axis=1)
-        permuted = predicted[random_orders]
-        predicted_differences = permuted[:, left] - permuted[:, right]
-        scores = np.where(
-            np.isclose(predicted_differences[:, valid], 0),
-            0.5,
-            np.sign(predicted_differences[:, valid])
-            == np.sign(observed_differences[valid]),
+    n_candidates = int(full["material_group"].nunique())
+    n_possible_permutations = factorial(n_candidates)
+    if n_possible_permutations <= n_permutations:
+        candidate_permutations = np.asarray(
+            list(permutations(range(n_candidates))), dtype=int
         )
-        null_by_stratum.append(scores.mean(axis=1))
-    permutation_scores = np.nanmean(np.vstack(null_by_stratum), axis=0)
+        permutation_scores = coherent_panel_permutation_scores(
+            full, candidate_permutations
+        )
+        permutation_p = float(
+            np.mean(permutation_scores >= observed_pairwise_accuracy - 1e-12)
+        )
+        permutation_method = "exact"
+        permutation_reps = n_possible_permutations
+    else:
+        permutation_rng = np.random.default_rng(seed + 100_000_003)
+        candidate_permutations = np.argsort(
+            permutation_rng.random((n_permutations, n_candidates)), axis=1
+        )
+        permutation_scores = coherent_panel_permutation_scores(
+            full, candidate_permutations
+        )
+        permutation_p = float(
+            (1 + np.sum(permutation_scores >= observed_pairwise_accuracy - 1e-12))
+            / (n_permutations + 1)
+        )
+        permutation_method = "Monte Carlo"
+        permutation_reps = n_permutations
     if len(strata) > 1:
         leave_one_out_pairwise = [
             float(
@@ -304,10 +358,10 @@ def paired_incremental_metrics(
         ),
         "pairwise_difference_mae_ci_low": float(np.nanpercentile(pairwise_boot, 2.5)),
         "pairwise_difference_mae_ci_high": float(np.nanpercentile(pairwise_boot, 97.5)),
-        "pairwise_permutation_p_one_sided": float(
-            (1 + np.sum(permutation_scores >= observed_pairwise_accuracy))
-            / (n_resamples + 1)
-        ),
+        "pairwise_permutation_p_one_sided": permutation_p,
+        "pairwise_permutation_method": permutation_method,
+        "pairwise_permutation_reps": int(permutation_reps),
+        "pairwise_permutation_unit": "candidate label fixed across panel conditions",
         "pairwise_leave_one_stratum_out_min": float(np.nanmin(leave_one_out_pairwise)),
         "pairwise_leave_one_stratum_out_max": float(np.nanmax(leave_one_out_pairwise)),
         "condition_only_max_within_stratum_prediction_range": float(
@@ -376,14 +430,33 @@ def raw_predictive_q2(cells: pd.DataFrame, prediction_column: str) -> float:
     return 1.0 - float(np.sum((observed - predicted) ** 2)) / denominator if denominator > 0 else np.nan
 
 
+def adjusted_p_values(values: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Return Holm family-wise and Benjamini-Hochberg adjusted values."""
+    p_values = values.astype(float).to_numpy()
+    n_values = len(p_values)
+    order = np.argsort(p_values)
+    holm_values = np.empty(n_values, dtype=float)
+    running = 0.0
+    for rank, position in enumerate(order):
+        running = max(running, min(1.0, (n_values - rank) * p_values[position]))
+        holm_values[position] = running
+
+    bh_values = np.empty(n_values, dtype=float)
+    running = 1.0
+    for rank, position in reversed(list(enumerate(order, start=1))):
+        running = min(running, min(1.0, p_values[position] * n_values / rank))
+        bh_values[position] = running
+    return (
+        pd.Series(holm_values, index=values.index),
+        pd.Series(bh_values, index=values.index),
+    )
+
+
 def task_use_statement(rows: pd.DataFrame) -> str:
     primary = rows[rows["candidate_panel_evidence_tier"].eq("primary_complete_single_source")]
     if primary.empty:
         return "No complete single-source matched candidate panel was available; candidate-ranking use is not evaluated."
-    positive = primary[
-        (primary["full_condition_centered_contrast_q2_ci_low"] > 0)
-        & (primary["full_pairwise_accuracy_ci_low"] > 0.5)
-    ]
+    positive = primary[primary["pairwise_permutation_holm_lt_005"].eq(True)]
     if positive.empty:
         return "Complete matched panels were evaluated, but they did not provide consistent retrospective support for candidate ranking."
     if len(positive) == len(primary):
@@ -401,6 +474,8 @@ def main() -> None:
     parser.add_argument("--condition-only-predictions", type=Path, default=DEFAULT_CONDITION_ONLY)
     parser.add_argument("--source-summary", type=Path, default=DEFAULT_SOURCE_SUMMARY)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--bootstrap-reps", type=int, default=2000)
+    parser.add_argument("--permutation-reps", type=int, default=100000)
     args = parser.parse_args()
 
     for required in [
@@ -448,17 +523,21 @@ def main() -> None:
             full_panel,
             "y_pred",
             seed=20260714 + panel_id,
+            n_resamples=args.bootstrap_reps,
         )
         condition_intervals = condition_stratum_bootstrap(
             condition_panel,
             "y_pred_condition_only",
             seed=20261714 + panel_id,
+            n_resamples=args.bootstrap_reps,
         )
         variance_metrics = response_variance_structure(full_panel)
         incremental_metrics = paired_incremental_metrics(
             full_panel,
             condition_panel,
             seed=20262714 + panel_id,
+            n_resamples=args.bootstrap_reps,
+            n_permutations=args.permutation_reps,
         )
         full_summary_row = full_summary.loc[full_summary["panel_id"] == panel_id]
         if len(full_summary_row) != 1:
@@ -533,6 +612,21 @@ def main() -> None:
         )
 
     panels = pd.DataFrame(panel_rows)
+    panels["minimum_exact_permutation_p"] = panels["n_candidate_materials"].map(
+        lambda count: 1.0 / factorial(int(count))
+    )
+    panels["reporting_support"] = "higher_support"
+    panels.loc[panels["n_condition_strata"].lt(5), "reporting_support"] = (
+        "limited_condition_support"
+    )
+    panels.loc[panels["n_train_materials"].lt(5), "reporting_support"] = (
+        "limited_training_material_support"
+    )
+    panels.loc[
+        panels["n_condition_strata"].lt(5)
+        & panels["n_train_materials"].lt(5),
+        "reporting_support",
+    ] = "limited_condition_and_training_support"
     task_counts = (
         panels.groupby(["dataset", "contaminant"], as_index=False)
         .agg(
@@ -547,6 +641,21 @@ def main() -> None:
     primary_panels = panels[
         panels["candidate_panel_evidence_tier"].eq("primary_complete_single_source")
     ].copy()
+    holm, bh = adjusted_p_values(
+        primary_panels["pairwise_permutation_p_one_sided"]
+    )
+    primary_panels["pairwise_permutation_p_holm"] = holm
+    primary_panels["pairwise_permutation_q_bh"] = bh
+    primary_panels["pairwise_permutation_holm_lt_005"] = holm.lt(0.05)
+    primary_panels["pairwise_permutation_bh_lt_005"] = bh.lt(0.05)
+    for column in [
+        "pairwise_permutation_p_holm",
+        "pairwise_permutation_q_bh",
+        "pairwise_permutation_holm_lt_005",
+        "pairwise_permutation_bh_lt_005",
+    ]:
+        panels[column] = pd.NA
+        panels.loc[primary_panels.index, column] = primary_panels[column]
     primary_summary = (
         primary_panels.groupby(["dataset", "contaminant"], as_index=False)
         .agg(
@@ -579,28 +688,33 @@ def main() -> None:
         task_statements, on=["dataset", "contaminant"], how="left", validate="one_to_one"
     )
     primary_panel_flags = (
-        panels.assign(
-            is_primary=panels["candidate_panel_evidence_tier"].eq(
-                "primary_complete_single_source"
-            ),
-            positive_contrast=panels["full_condition_centered_contrast_q2"].gt(0),
-            above_chance_pairwise=panels["full_pairwise_accuracy"].gt(0.5),
-            supports_both=lambda frame: (
-                frame["full_condition_centered_contrast_q2"].gt(0)
-                & frame["full_pairwise_accuracy"].gt(0.5)
-            ),
-            interval_supports_both=lambda frame: (
-                frame["full_condition_centered_contrast_q2_ci_low"].gt(0)
-                & frame["full_pairwise_accuracy_ci_low"].gt(0.5)
+        primary_panels.assign(
+            positive_contrast=primary_panels[
+                "full_condition_centered_contrast_q2"
+            ].gt(0),
+            positive_contrast_interval=primary_panels[
+                "full_condition_centered_contrast_q2_ci_low"
+            ].gt(0),
+            above_chance_pairwise=primary_panels["full_pairwise_accuracy"].gt(0.5),
+            holm_ordering=primary_panels["pairwise_permutation_holm_lt_005"],
+            holm_and_contrast=lambda frame: (
+                frame["pairwise_permutation_holm_lt_005"]
+                & frame["full_condition_centered_contrast_q2_ci_low"].gt(0)
             ),
         )
-        .query("is_primary")
         .groupby(["dataset", "contaminant"], as_index=False)
         .agg(
             n_primary_positive_contrast_q2=("positive_contrast", "sum"),
+            n_primary_positive_contrast_intervals=(
+                "positive_contrast_interval",
+                "sum",
+            ),
             n_primary_above_chance_pairwise=("above_chance_pairwise", "sum"),
-            n_primary_supporting_both=("supports_both", "sum"),
-            n_primary_interval_supporting_both=("interval_supports_both", "sum"),
+            n_primary_holm_ordering=("holm_ordering", "sum"),
+            n_primary_holm_ordering_and_positive_contrast=(
+                "holm_and_contrast",
+                "sum",
+            ),
         )
     )
     task_summary = task_summary.merge(
@@ -650,6 +764,9 @@ def main() -> None:
     )
     args.out_dir.mkdir(parents=True, exist_ok=True)
     panels.to_csv(args.out_dir / "screening_evidence_by_panel.csv", index=False)
+    primary_panels.to_csv(
+        args.out_dir / "primary_candidate_panel_evidence.csv", index=False
+    )
     task_summary.to_csv(args.out_dir / "screening_evidence_by_task.csv", index=False)
     overall_rows = []
     for label, subset in [
@@ -709,6 +826,18 @@ def main() -> None:
                         & subset["full_pairwise_accuracy_ci_low"].gt(0.5)
                     ).sum()
                 ),
+                "n_pairwise_permutation_p_lt_005": int(
+                    subset["pairwise_permutation_p_one_sided"].lt(0.05).sum()
+                ),
+                "n_pairwise_permutation_holm_lt_005": int(
+                    subset["pairwise_permutation_holm_lt_005"].eq(True).sum()
+                ),
+                "n_holm_ordering_and_positive_contrast_interval": int(
+                    (
+                        subset["pairwise_permutation_holm_lt_005"].eq(True)
+                        & subset["full_condition_centered_contrast_q2_ci_low"].gt(0)
+                    ).sum()
+                ),
             }
         )
     pd.DataFrame(overall_rows).to_csv(
@@ -728,7 +857,9 @@ def main() -> None:
         "Evidence statements are retrospective and condition-domain specific. A positive panel signal does not establish candidate exclusion or a reduction in prospective testing.",
         "",
         "Condition-centered Q2 uses the observed within-stratum material contrast as its denominator. It can be extremely negative when observed material differences are very small; report it with the contrast range and use pairwise accuracy as the primary ranking metric.",
-        "Pairwise accuracy and material-contrast Q2 intervals resample complete matched-condition strata 2000 times. They summarize sensitivity to the represented condition set and are not population confidence intervals for future materials.",
+        f"Pairwise accuracy and material-contrast Q2 intervals resample complete matched-condition strata {args.bootstrap_reps:,} times. They summarize sensitivity to the represented condition set and are not population confidence intervals for future materials.",
+        f"The one-sided random-ordering comparison applies one candidate-label permutation consistently across every condition in a panel. All permutations are enumerated when n! is no greater than {args.permutation_reps:,}; otherwise, {args.permutation_reps:,} Monte Carlo permutations are used. Holm and Benjamini-Hochberg adjustments are calculated across the primary panels.",
+        "Exact-test resolution depends on candidate count; minimum_exact_permutation_p records the smallest attainable unadjusted P value for each panel.",
     ]
     (args.out_dir / "README.md").write_text("\n".join(readme) + "\n", encoding="utf-8")
     print(args.out_dir / "screening_evidence_by_panel.csv")

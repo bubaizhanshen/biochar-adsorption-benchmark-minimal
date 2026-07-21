@@ -209,6 +209,7 @@ def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: in
         split_kind="LOBO",
         seed=12000 + task_order * 200 + fold_id,
         n_jobs=n_jobs,
+        selection_metric="group_mae",
     )
     model = best["best_estimator"]
     prediction = np.asarray(model.predict(x.iloc[test_index]), dtype=float)
@@ -253,7 +254,12 @@ def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: in
                 "inner_cv_r2": best["best_cv_r2"],
                 "inner_cv_mae": best["best_cv_mae"],
                 "inner_cv_rmse": best["best_cv_rmse"],
-                "selection_source": "nested selection rerun with stable source-specific material-group codes",
+                "inner_cv_group_mae": best["best_cv_group_mae"],
+                "inner_cv_group_rmse": best["best_cv_group_rmse"],
+                "selection_metric": best["selection_metric"],
+                "selection_source": (
+                    "nested group-preserving selection by mean group-balanced MAE"
+                ),
             }
         ]
     )
@@ -304,8 +310,10 @@ def merge_shards(
         raise RuntimeError("Merged diagnostics do not contain one row per manifest fold.")
     if len(predictions) != 3512:
         raise RuntimeError(f"Expected 3512 OOF predictions; found {len(predictions)}.")
-    if not diagnostics["selection_source"].str.startswith("nested selection rerun").all():
-        raise RuntimeError("At least one outer fold was not newly nested under stable groups.")
+    if not diagnostics["selection_metric"].eq("group_mae").all():
+        raise RuntimeError(
+            "At least one outer fold did not use group-balanced MAE selection."
+        )
 
     summaries: list[dict[str, object]] = []
     for task_number, ((dataset, contaminant), task) in enumerate(
@@ -349,9 +357,13 @@ def merge_shards(
 
     q2 = summary["material_balanced_predictive_q2"]
     report = [
-        "# Fully rerun traceable-material holdout benchmark",
+        "# Traceable-material holdout benchmark",
         "",
-        f"All {len(diagnostics)} outer material folds and their inner grouped model-selection procedures were rerun after source-specific material reconstruction. Material groups were encoded by first occurrence within each task so GroupKFold does not depend on the lexical order of material names.",
+        (
+            f"All {len(diagnostics)} outer material folds used source-specific "
+            "material groups. Inner candidates were selected by mean group-balanced "
+            "MAE, with group-balanced RMSE used only for numerical ties."
+        ),
         "",
         f"- Tasks: {len(summary)}",
         f"- OOF rows: {len(predictions)}",
