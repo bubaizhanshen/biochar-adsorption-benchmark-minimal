@@ -2,7 +2,7 @@
 
 Status: PASS
 
-- Frozen protocol SHA-256: `dfb2029812af8a4a915aeb53b04412c308787544086f94bd3014684d673c345e`
+- Staged-retention rule specification: valid
 - Biochar holdout: 10 tasks, 146 folds, median material-balanced Q2 = 0.693
 - Study-block holdout: 6 tasks, 30 folds, median study-balanced Q2 = 0.237
 - Material-inner sensitivity: median study-balanced Q2 = 0.314

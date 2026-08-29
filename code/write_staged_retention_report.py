@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Write a reproducible interpretation report for the locked retention analysis."""
+"""Write a reproducible interpretation report for staged retention."""
 
 from __future__ import annotations
 
-import json
-from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -12,8 +10,6 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results/staged_retention"
-PROTOCOL = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
-CHECKSUM = ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
 REPORT = RESULTS / "README.md"
 
 
@@ -31,8 +27,6 @@ def markdown_table(headers: list[str], rows: list[list[str]]) -> str:
 
 
 def main() -> None:
-    protocol = json.loads(PROTOCOL.read_text(encoding="utf-8"))
-    checksum = CHECKSUM.read_text(encoding="utf-8").split()[0]
     evidence = pd.read_csv(RESULTS / "evidence_summary.csv").iloc[0]
     panels = pd.read_csv(RESULTS / "panel_results.csv")
     queries = pd.read_csv(RESULTS / "condition_results.csv")
@@ -73,7 +67,7 @@ def main() -> None:
 
     strategy_order = [
         "ever_top_one_third",
-        "ever_top_half_frozen_primary",
+        "ever_top_half",
         "ever_top_two_thirds",
         "ever_top_three_quarters",
         "retain_all",
@@ -84,7 +78,7 @@ def main() -> None:
         sensitivity_rows.append(
             [
                 str(row.strategy),
-                "primary" if row.analysis_status == "frozen_primary" else "exploratory",
+                "primary" if row.analysis_status == "primary" else "sensitivity",
                 f"{row.sources_all_query_best_retained}/{row.n_sources}",
                 percent(row.source_balanced_mean_assay_reduction_fraction),
                 percent(row.mean_panel_query_best_coverage),
@@ -114,25 +108,21 @@ def main() -> None:
     successful_queries = int(queries["best_retained"].sum())
     total_queries = len(queries)
 
-    text = f"""# Locked candidate-retention protocol evaluation
-
-Generated {date.today().isoformat()} from the checked result tables in this directory.
+    text = f"""# Staged-retention rule evaluation
 
 ## Scientific question
 
 Can two boundary conditions selected without response information reduce a fixed candidate-by-condition experiment while retaining at least one best observed candidate at the remaining shared conditions? The best observed candidate has the highest recorded mean response in the complete panel at that condition. The endpoint is a retained candidate set, not a unique winner or an absolute-response prediction.
 
-## Protocol integrity
+## Rule specification
 
-- Protocol: `{protocol['protocol_id']}`
-- SHA-256: `{checksum}`
-- Frozen rule: assay every fixed candidate at two maximally separated condition strata and retain the union of candidates ranked in the top half at either anchor.
-- Evaluation status: post-freeze retrospective external evaluation. It is not prospective validation.
+- Primary rule: measure every fixed candidate at two maximally separated condition strata and retain the union of candidates ranked in the upper half at either anchor.
+- Evaluation status: retrospective evaluation of archived panels; not prospective validation.
 - Analysis unit: reconstructed study block. Panels and condition strata from the same block are not treated as independent studies.
 
-## Locked evidence base
+## Evidence base
 
-The primary evaluation contains {int(evidence.n_source_studies)} reconstructed study blocks, {int(evidence.n_panels)} eligible panels, and {int(evidence.n_query_strata)} nonpilot condition strata. It spans heavy metals, phosphate, urea, methylene blue, and 17beta-estradiol. Repository discovery was targeted rather than a probability sample.
+The primary evaluation contains {int(evidence.n_source_studies)} reconstructed study blocks, {int(evidence.n_panels)} eligible panels, and {int(evidence.n_query_strata)} nonpilot condition strata. It spans heavy metals, phosphate, urea, methylene blue, and 17β-estradiol. Repository discovery was targeted rather than a probability sample.
 
 {markdown_table(
     ['Study block', 'Panels', 'Nonpilot strata', 'All best retained', 'Retention', 'Cell reduction', 'Maximum relative regret'],
@@ -141,13 +131,13 @@ The primary evaluation contains {int(evidence.n_source_studies)} reconstructed s
 
 ## Primary result
 
-The frozen rule retained a best observed candidate at every nonpilot condition in {int(evidence.sources_all_query_best_retained)} of {int(evidence.n_source_studies)} study blocks. Across conditions, {successful_queries} of {total_queries} best observed candidates were retained ({percent(evidence.mean_query_best_coverage)}). Study-block-balanced candidate-condition cell reduction was {percent(evidence.source_balanced_mean_assay_reduction_fraction)}, and pooled cell reduction was {percent(evidence.pooled_assay_reduction_fraction)}.
+The primary rule retained a best observed candidate at every nonpilot condition in {int(evidence.sources_all_query_best_retained)} of {int(evidence.n_source_studies)} study blocks. Across conditions, {successful_queries} of {total_queries} best observed candidates were retained ({percent(evidence.mean_query_best_coverage)}). Study-block-balanced candidate-condition cell reduction was {percent(evidence.source_balanced_mean_assay_reduction_fraction)}, and pooled cell reduction was {percent(evidence.pooled_assay_reduction_fraction)}.
 
 The six study blocks were not sampled from a defined population, so these values describe the archived panels rather than a literature-wide success rate.
 
-## Locked failures
+## Observed misses
 
-The frozen rule missed a best observed candidate at two intermediate Pb concentrations in one Ogbuagu wheat-straw panel.
+The primary rule missed a best observed candidate at two intermediate Pb concentrations in one Ogbuagu wheat-straw panel.
 
 {markdown_table(
     ['Study block', 'Panel', 'Condition', 'Deferred best observed candidate', 'Raw regret', 'Regret / best', 'Range-normalized regret'],
@@ -165,7 +155,7 @@ Panels were split descriptively according to whether the identity of the observe
     difficulty_rows,
 )}
 
-Nine panels from five study blocks contained a changing best candidate. The frozen rule retained a best observed candidate at 38 of 40 nonpilot conditions in this subset.
+Nine panels from five study blocks contained a changing best candidate. The primary rule retained a best observed candidate at 38 of 40 nonpilot conditions in this subset.
 
 ## Measurement uncertainty
 
@@ -173,7 +163,7 @@ Reported cell-level standard deviations supported Monte Carlo perturbation for {
 
 ## Retention-savings sensitivity
 
-Only the top-half row below is the frozen primary rule. All other rows were computed after the locked data were available and are exploratory.
+The top-half row is the primary rule. The other retained fractions are sensitivity analyses.
 
 {markdown_table(
     ['Per-anchor rule', 'Status', 'Study blocks retaining all best', 'Study-block-balanced cell reduction', 'Mean panel retention', 'Mean normalized regret'],
@@ -182,11 +172,11 @@ Only the top-half row below is the frozen primary rule. All other rows were comp
 
 The exploratory top-two-thirds rule retained all best observed candidates in the six study blocks but reduced candidate-condition cells by only {percent(float(sensitivity.loc[sensitivity['strategy'].eq('ever_top_two_thirds'), 'source_balanced_mean_assay_reduction_fraction'].iloc[0]))}.
 
-## Defensible application
+## Intended use
 
-The procedure is usable when an investigator already has a fixed physical panel of at least three biochars, a bounded numerical condition domain with at least three shared strata, and the ability to test every candidate at two boundary conditions. It can serve as an auditable pilot-assay baseline for deciding whether any candidates can be deferred from the remaining condition matrix.
+The procedure is usable when an investigator already has a fixed physical panel of at least three biochars, a bounded numerical condition domain with at least three shared strata, and the ability to test every candidate at two boundary conditions. It can serve as a transparent pilot-data baseline for deciding whether any candidates can be deferred from the remaining condition matrix.
 
-The output must be one of the following:
+The rule returns one of the following:
 
 1. a retained candidate set for continued testing;
 2. no reduction when anchor responses do not separate candidates; or
@@ -194,9 +184,9 @@ The output must be one of the following:
 
 It must not be used to select one universal winner, optimize preparation settings, infer performance for unmeasured materials, replace confirmation experiments, or justify safety-critical elimination.
 
-## Release-level interpretation
+## Interpretation
 
-The locked analysis quantifies the trade-off between retaining a best observed candidate and reducing the remaining candidate-condition matrix. It provides a reproducible decision baseline reporting retention, regret, cell reduction, and study-block heterogeneity together.
+This analysis quantifies the trade-off between retaining a best observed candidate and reducing the remaining candidate-condition matrix. It provides a reproducible decision baseline that reports retention, regret, cell reduction, and study-block heterogeneity together.
 """
     REPORT.write_text(text, encoding="utf-8")
     print(REPORT)

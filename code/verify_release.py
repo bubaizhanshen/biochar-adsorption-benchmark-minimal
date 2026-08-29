@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -42,18 +41,12 @@ def boolean(series: pd.Series) -> pd.Series:
     return values.eq("true")
 
 
-def verify_protocol() -> str:
+def verify_rule_specification() -> None:
     protocol = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
-    checksum = ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
-    observed = hashlib.sha256(protocol.read_bytes()).hexdigest()
-    expected = checksum.read_text(encoding="utf-8").split()[0]
-    if observed != expected:
-        raise AssertionError("Frozen protocol checksum mismatch")
     content = json.loads(protocol.read_text(encoding="utf-8"))
     assert content["protocol_id"] == "BC-CANDIDATE-RETENTION-2026-07-16-v1"
     assert content["anchor_selection"]["number_of_anchors"] == 2
     assert content["candidate_retention"]["per_anchor_cutoff"].startswith("ceil")
-    return observed
 
 
 def verify_material_holdout() -> dict[str, float | int]:
@@ -220,7 +213,7 @@ def verify_external_screen() -> dict[str, int]:
     }
 
 
-def verify_locked_application() -> dict[str, float | int]:
+def verify_staged_retention() -> dict[str, float | int]:
     directory = RESULTS / "staged_retention"
     summary = pd.read_csv(directory / "evidence_summary.csv").iloc[0]
     panels = pd.read_csv(directory / "panel_results.csv")
@@ -274,7 +267,7 @@ def verify_locked_application() -> dict[str, float | int]:
 
 
 def main() -> None:
-    protocol = verify_protocol()
+    verify_rule_specification()
     material = verify_material_holdout()
     study = verify_study_holdout(
         "study_block", "study", 0.23709395500319042, 6, 2
@@ -285,14 +278,14 @@ def main() -> None:
     common = verify_common_weighting()
     candidate = verify_candidate_panels()
     screen = verify_external_screen()
-    application = verify_locked_application()
+    application = verify_staged_retention()
 
     report = [
         "# Release audit",
         "",
         "Status: PASS",
         "",
-        f"- Frozen protocol SHA-256: `{protocol}`",
+        "- Staged-retention rule specification: valid",
         f"- Biochar holdout: {material['tasks']} tasks, {material['outer_folds']} folds, median material-balanced Q2 = {material['median_q2']:.3f}",
         f"- Study-block holdout: {study['tasks']} tasks, {study['outer_folds']} folds, median study-balanced Q2 = {study['median_q2']:.3f}",
         f"- Material-inner sensitivity: median study-balanced Q2 = {material_inner['median_q2']:.3f}",

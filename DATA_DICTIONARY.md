@@ -129,6 +129,8 @@ Important panel-data fields include `study_id`, `doi`, `panel_id`, `pollutant`, 
 
 The screen is targeted and non-probabilistic. Registry counts describe the documented search flow, not prevalence in the literature.
 
+The primary two-condition rule is defined in `data/protocols/candidate_retention_protocol_v1.json`, and changes to the specification are recorded by Git.
+
 ## Staged-retention results
 
 Directory: `results/staged_retention/`
@@ -148,3 +150,5 @@ Directory: `results/staged_retention/`
 | `comparator_summary.csv` | Hazard-focused, structural-sensitivity, and all-panel summaries |
 
 `best_retained` means that at least one candidate tied for the highest recorded mean response at that nonpilot condition remained in the retained set. `normalized_regret` is zero when a best observed candidate was retained. Candidate-condition cell reduction excludes replicate counts, setup overhead, labor, and monetary cost.
+
+Legacy result fields containing `assay_units` or `assay_reduction_fraction` count candidate-condition cells. They do not denote replicate-level assays, laboratory time, or cost.

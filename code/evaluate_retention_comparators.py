@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the frozen two-condition rule with retrospective baselines."""
+"""Compare the primary two-condition rule with retrospective baselines."""
 
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from evaluate_external_candidate_retention import (
+from staged_retention_utils import (
+    boundary_pair,
+    design_table,
     ever_top_fraction_retained,
     retention_metrics,
 )
-from evaluate_external_panel_fewshot import boundary_pair, design_table
 
 
 ROOT = Path(__file__).resolve().parents[1]

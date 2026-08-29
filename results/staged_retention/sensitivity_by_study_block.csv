@@ -1,10 +1,10 @@
 strategy,study_id,n_panels,all_panel_query_best_retained,mean_panel_query_best_coverage,mean_panel_normalized_regret,assay_reduction_fraction
-ever_top_half_frozen_primary,Ogbuagu2023,3,False,0.7777777777777778,0.01580677362906371,0.1785714285714286
-ever_top_half_frozen_primary,Padilla2023,1,True,1.0,0.0,0.2666666666666667
-ever_top_half_frozen_primary,Soria2020,3,True,1.0,0.0,0.30400000000000005
-ever_top_half_frozen_primary,Vasconcelos2025,2,True,1.0,0.0,0.11111111111111116
-ever_top_half_frozen_primary,Wang2021,1,True,1.0,0.0,0.16666666666666663
-ever_top_half_frozen_primary,Wei2025,4,True,1.0,0.0,0.16000000000000003
+ever_top_half,Ogbuagu2023,3,False,0.7777777777777778,0.01580677362906371,0.1785714285714286
+ever_top_half,Padilla2023,1,True,1.0,0.0,0.2666666666666667
+ever_top_half,Soria2020,3,True,1.0,0.0,0.30400000000000005
+ever_top_half,Vasconcelos2025,2,True,1.0,0.0,0.11111111111111116
+ever_top_half,Wang2021,1,True,1.0,0.0,0.16666666666666663
+ever_top_half,Wei2025,4,True,1.0,0.0,0.16000000000000003
 ever_top_one_third,Ogbuagu2023,3,False,0.7777777777777778,0.01580677362906371,0.2142857142857143
 ever_top_one_third,Padilla2023,1,True,1.0,0.0,0.2666666666666667
 ever_top_one_third,Soria2020,3,False,0.8333333333333334,0.00026225652434163363,0.4

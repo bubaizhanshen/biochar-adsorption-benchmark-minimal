@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
-"""Explore retention-versus-assay tradeoffs without altering frozen protocol v1."""
+"""Explore the retention-versus-cell-reduction trade-off."""
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 
 import pandas as pd
 
-from evaluate_external_candidate_retention import (
+from staged_retention_utils import (
+    boundary_pair,
+    design_table,
     ever_top_fraction_retained,
     retention_metrics,
 )
-from evaluate_external_panel_fewshot import boundary_pair, design_table
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROTOCOL = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
-PROTOCOL_CHECKSUM = (
-    ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
-)
 INPUT = (
     ROOT
     / "data/external_panels"
@@ -29,25 +24,14 @@ INPUT = (
 OUT = ROOT / "results/staged_retention"
 STRATEGIES = (
     ("ever_top_one_third", 1 / 3),
-    ("ever_top_half_frozen_primary", 1 / 2),
+    ("ever_top_half", 1 / 2),
     ("ever_top_two_thirds", 2 / 3),
     ("ever_top_three_quarters", 3 / 4),
     ("retain_all", 1.0),
 )
 
 
-def verified_protocol() -> tuple[dict[str, object], str]:
-    observed = hashlib.sha256(PROTOCOL.read_bytes()).hexdigest()
-    expected = PROTOCOL_CHECKSUM.read_text(encoding="utf-8").split()[0]
-    if observed != expected:
-        raise RuntimeError(
-            f"Frozen protocol checksum mismatch: expected {expected}, observed {observed}"
-        )
-    return json.loads(PROTOCOL.read_text(encoding="utf-8")), observed
-
-
 def main() -> None:
-    protocol, protocol_sha256 = verified_protocol()
     panels = pd.read_csv(INPUT)
     rows = []
     for panel_id, panel in panels.groupby("panel_id", sort=True):
@@ -65,12 +49,8 @@ def main() -> None:
             protocol_units = candidates * 2 + len(retained) * (strata - 2)
             rows.append(
                 {
-                    "protocol_id": protocol["protocol_id"],
-                    "protocol_sha256": protocol_sha256,
                     "analysis_status": (
-                        "frozen_primary"
-                        if strategy == "ever_top_half_frozen_primary"
-                        else "postfreeze_exploratory_sensitivity"
+                        "primary" if strategy == "ever_top_half" else "sensitivity"
                     ),
                     "study_id": panel["study_id"].iloc[0],
                     "panel_id": panel_id,

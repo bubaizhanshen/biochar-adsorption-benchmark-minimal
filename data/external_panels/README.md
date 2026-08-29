@@ -30,6 +30,6 @@ The two boundary conditions were selected from the complete shared-condition gri
 
 - `screening_registry.csv`: record-level screening decisions and exclusion reasons.
 - `panel_audit.csv`: panel-level eligibility and provenance audit.
-- `panel_responses.csv`: 488 directly tabulated candidate-condition responses used by the frozen primary evaluation.
+- `panel_responses.csv`: 488 directly tabulated candidate-condition responses used by the primary staged-retention evaluation.
 
 Article and repository identifiers are retained in the CSV files for source verification. Environmental relevance was not used as an inclusion criterion for this retrospective structural evaluation.

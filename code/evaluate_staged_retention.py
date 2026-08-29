@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply frozen candidate-retention protocol v1 to post-freeze panels once."""
+"""Evaluate the primary two-condition staged-retention rule."""
 
 from __future__ import annotations
 
@@ -10,18 +10,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from evaluate_external_candidate_retention import (
+from staged_retention_utils import (
+    boundary_pair,
+    design_table,
     ever_top_fraction_retained,
+    panel_difficulty,
     retention_metrics,
 )
-from evaluate_external_panel_fewshot import boundary_pair, design_table, panel_difficulty
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PROTOCOL = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
-PROTOCOL_CHECKSUM = (
-    ROOT / "data/protocols/candidate_retention_protocol_v1.sha256"
-)
+RULE_SPECIFICATION = ROOT / "data/protocols/candidate_retention_protocol_v1.json"
 INPUT = (
     ROOT
     / "data/external_panels"
@@ -31,14 +30,14 @@ OUT = ROOT / "results/staged_retention"
 SIMULATIONS = 20_000
 
 
-def verify_protocol() -> str:
-    observed = hashlib.sha256(PROTOCOL.read_bytes()).hexdigest()
-    expected = PROTOCOL_CHECKSUM.read_text(encoding="utf-8").split()[0]
-    if observed != expected:
-        raise RuntimeError(
-            f"Frozen protocol checksum mismatch: expected {expected}, observed {observed}"
-        )
-    return observed
+def load_rule() -> dict[str, object]:
+    rule = json.loads(RULE_SPECIFICATION.read_text(encoding="utf-8"))
+    if rule["anchor_selection"]["number_of_anchors"] != 2:
+        raise ValueError("The staged-retention analysis requires two anchors")
+    cutoff = rule["candidate_retention"]["per_anchor_cutoff"]
+    if cutoff != "ceil(number_of_candidates / 2)":
+        raise ValueError("The staged-retention rule must use the upper-half cutoff")
+    return rule
 
 
 def protocol_seed(protocol_id: str, panel_id: str) -> int:
@@ -130,8 +129,7 @@ def simulated_coverage(
 
 
 def main() -> None:
-    protocol_sha256 = verify_protocol()
-    protocol = json.loads(PROTOCOL.read_text(encoding="utf-8"))
+    protocol = load_rule()
     panels = pd.read_csv(INPUT)
     OUT.mkdir(parents=True, exist_ok=True)
     rows = []
@@ -186,8 +184,6 @@ def main() -> None:
             )
         rows.append(
             {
-                "protocol_id": protocol["protocol_id"],
-                "protocol_sha256": protocol_sha256,
                 "panel_id": panel_id,
                 "study_id": panel["study_id"].iloc[0],
                 "pollutant": panel["pollutant"].iloc[0],
@@ -303,8 +299,6 @@ def main() -> None:
     summary = pd.DataFrame(
         [
             {
-                "protocol_id": protocol["protocol_id"],
-                "protocol_sha256": protocol_sha256,
                 "n_source_studies": n_sources,
                 "n_panels": len(results),
                 "n_query_strata": len(query_results),

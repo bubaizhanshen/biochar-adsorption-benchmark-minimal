@@ -1,6 +1,6 @@
 # Endpoint-aligned evaluation of biochar adsorption models
 
-This repository contains the data, identity registries, analysis code, frozen retention protocol, and numerical outputs used to evaluate biochar adsorption models at the material, study-block, and candidate-panel levels. Manuscript files, figures, and figure-generation code are intentionally excluded.
+This repository contains the data, identity registries, analysis code, staged-retention rule specification, and numerical outputs used to evaluate biochar adsorption models at the material, study-block, and candidate-panel levels. Manuscript files, figures, and figure-generation code are intentionally excluded.
 
 ## Evaluation targets
 
@@ -38,7 +38,7 @@ Candidate-label permutations apply one mapping consistently across every conditi
 ├── data/
 │   ├── benchmark/                    # three released adsorption tables
 │   ├── external_panels/              # screening registry and panel responses
-│   ├── protocols/                    # frozen candidate-retention rule
+│   ├── protocols/                    # staged-retention rule specification
 │   └── registries/                   # source-linked material-group audit
 ├── code/                              # analysis and verification scripts
 └── results/
@@ -74,7 +74,7 @@ pip install -r requirements.txt
 python code/verify_release.py
 ```
 
-The verifier checks the protocol checksum, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `results/release_audit_report.md` and exits with status 0.
+The verifier checks the staged-retention rule specification, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `results/release_audit_report.md` and exits with status 0.
 
 ## Reproduce summary analyses
 
@@ -86,6 +86,12 @@ python code/compare_inner_grouping.py
 python code/build_candidate_evidence.py
 python code/evaluate_retention_comparators.py
 python code/verify_release.py
+```
+
+The archived-panel retention analysis can be regenerated as one target:
+
+```bash
+make staged-retention
 ```
 
 ## Re-run nested model selection
