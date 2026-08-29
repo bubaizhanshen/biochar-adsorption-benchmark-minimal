@@ -146,3 +146,10 @@ Panels 5 and 8 are sensitivity panels. The primary candidate analysis uses the 1
 - The staged-retention results are retrospective and do not establish prospective performance under environmentally relevant conditions.
 
 See `DATA_DICTIONARY.md` for field-level definitions.
+
+## License and data use
+
+The analysis software is released under the [MIT License](LICENSE). Source datasets,
+source-derived observations, and computational outputs are governed separately
+as described in [DATA_USE.md](DATA_USE.md); the software license does not relicense the
+underlying scientific data.
