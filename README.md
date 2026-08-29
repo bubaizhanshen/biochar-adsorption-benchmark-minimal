@@ -74,7 +74,7 @@ pip install -r requirements.txt
 python code/verify_release.py
 ```
 
-The verifier checks the staged-retention rule specification, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `results/release_audit_report.md` and exits with status 0.
+The verifier checks the staged-retention rule specification, task order, OOF coverage, inner-selection objective, common-weight comparison, coherent permutation unit, multiplicity-adjusted panel evidence, source-screen flow, retention failures, and headline values. A successful run writes `results/release_audit_report.md` and exits with status 0. The same audit runs on every push and pull request.
 
 ## Reproduce summary analyses
 
