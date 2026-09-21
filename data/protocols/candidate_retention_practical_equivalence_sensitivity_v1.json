@@ -1,0 +1,21 @@
+{
+  "protocol_id": "BC-CANDIDATE-RETENTION-PRACTICAL-EQUIVALENCE-2026-09-21-v1",
+  "parent_protocol_id": "BC-CANDIDATE-RETENTION-2026-07-16-v1",
+  "status": "exploratory_post_hoc_sensitivity_not_primary",
+  "purpose": "Quantify how the nominal best-candidate endpoint changes when candidates within a stated fraction of the observed within-stratum response range are treated as practically equivalent.",
+  "epsilon_definition": "epsilon_fraction times the observed response range within each nonpilot condition stratum",
+  "epsilon_fractions": [
+    0.0,
+    0.01,
+    0.05
+  ],
+  "selector": "frozen two-boundary upper-half union from the parent protocol",
+  "scope": "14 structurally admitted archived external panels",
+  "primary_endpoint_unchanged": true,
+  "not_supported": [
+    "a measurement-error-derived equivalence margin",
+    "a prospective decision threshold",
+    "a literature-wide success rate",
+    "a safety or efficacy guarantee"
+  ]
+}

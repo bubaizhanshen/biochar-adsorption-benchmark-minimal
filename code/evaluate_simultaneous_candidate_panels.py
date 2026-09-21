@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from candidate_utils import condition_key
+from candidate_utils import condition_key, recorded_condition_columns
+from descriptor_profiles import apply_material_descriptor_profile
 from modeling_core import DATASETS, fit_best_search
 from run_biochar_holdout import load_task
 
@@ -86,6 +87,25 @@ def build_manifest(support_path: Path, manifest_path: Path) -> pd.DataFrame:
         candidates = str(panel_key).split("||")
         candidate_rows = task[task["material_group"].isin(candidates)]
         train_rows = task[~task["material_group"].isin(candidates)]
+        base_columns = [column for column in DATASETS[dataset].ac_cols if column in task]
+        condition_columns = recorded_condition_columns(dataset, task, base_columns)
+        candidate_rows = candidate_rows.copy()
+        candidate_rows["base_condition_key"] = condition_key(candidate_rows, base_columns)
+        candidate_rows["condition_key"] = condition_key(candidate_rows, condition_columns)
+        base_keys = set(strata["condition_key"].astype(str))
+        eligible_rows = candidate_rows[candidate_rows["base_condition_key"].isin(base_keys)]
+        missing_recorded_condition = eligible_rows[condition_columns].isna().any(axis=1)
+        complete_counts = (
+            eligible_rows.loc[~missing_recorded_condition]
+            .groupby("condition_key")["material_group"]
+            .nunique()
+        )
+        complete_keys = sorted(complete_counts[complete_counts == len(candidates)].index)
+        if not complete_keys:
+            raise RuntimeError(
+                f"Candidate panel {dataset}/{contaminant}/{panel_key} has no complete "
+                "condition grid after adding recorded condition metadata."
+            )
         rows.append(
             {
                 "panel_id": panel_id,
@@ -94,8 +114,9 @@ def build_manifest(support_path: Path, manifest_path: Path) -> pd.DataFrame:
                 "candidate_panel_key": panel_key,
                 "candidate_materials": candidate_materials,
                 "candidate_materials_json": json.dumps(candidates),
-                "condition_keys_json": json.dumps(strata["condition_key"].astype(str).tolist()),
-                "n_condition_strata": len(strata),
+                "condition_keys_json": json.dumps(complete_keys),
+                "condition_key_columns": " | ".join(condition_columns),
+                "n_condition_strata": len(complete_keys),
                 "n_candidate_materials": len(candidates),
                 "n_train_materials": int(train_rows["material_group"].nunique()),
                 "n_candidate_rows": len(candidate_rows),
@@ -115,7 +136,13 @@ def build_manifest(support_path: Path, manifest_path: Path) -> pd.DataFrame:
     return manifest
 
 
-def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) -> None:
+def run_panel(
+    panel_id: int,
+    manifest_path: Path,
+    shard_dir: Path,
+    n_jobs: int,
+    descriptor_profile: Path | None = None,
+) -> None:
     manifest = pd.read_csv(manifest_path)
     selected = manifest[manifest["panel_id"] == panel_id]
     if len(selected) != 1:
@@ -126,8 +153,11 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
     candidates = json.loads(str(row["candidate_materials_json"]))
     eligible_condition_keys = set(json.loads(str(row["condition_keys_json"])))
     task, features = load_task(dataset, contaminant)
+    task, descriptor_profile_policy = apply_material_descriptor_profile(
+        task, descriptor_profile
+    )
     cfg = DATASETS[dataset]
-    condition_columns = [column for column in cfg.ac_cols if column in task.columns]
+    condition_columns = recorded_condition_columns(dataset, task, list(cfg.ac_cols))
     task["condition_key"] = condition_key(task, condition_columns)
 
     test_mask = task["material_group"].isin(candidates)
@@ -189,6 +219,7 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
                 "inner_cv_group_mae": best["best_cv_group_mae"],
                 "inner_cv_group_rmse": best["best_cv_group_rmse"],
                 "selection_metric": best["selection_metric"],
+                "descriptor_profile": descriptor_profile_policy,
             }
         ]
     )
@@ -507,6 +538,7 @@ def main() -> None:
     parser.add_argument("--merge-shards", action="store_true")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--n-jobs", type=int, default=4)
+    parser.add_argument("--descriptor-profile", type=Path, default=None)
     parser.add_argument("--bootstrap-reps", type=int, default=5000)
     args = parser.parse_args()
 
@@ -514,7 +546,13 @@ def main() -> None:
         build_manifest(args.support, args.manifest)
         return
     if args.panel_id is not None:
-        run_panel(args.panel_id, args.manifest, args.shard_dir, args.n_jobs)
+        run_panel(
+            args.panel_id,
+            args.manifest,
+            args.shard_dir,
+            args.n_jobs,
+            args.descriptor_profile,
+        )
         return
     if args.merge_shards:
         merge_shards(args.manifest, args.shard_dir, args.out_dir, args.bootstrap_reps)

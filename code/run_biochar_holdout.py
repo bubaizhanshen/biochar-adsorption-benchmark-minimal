@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from lxml import etree
@@ -22,6 +23,7 @@ from metrics import (  # noqa: E402
 from modeling_core import (  # noqa: E402
     DATASETS,
     FEATURE_SET_BUILDERS,
+    add_condition_features,
     fit_best_search,
     normalize_text,
 )
@@ -43,7 +45,7 @@ TASKS = [
     ("Dataset II", "Sr (II)"),
     ("Dataset II", "Fe (III)"),
     ("Dataset II", "Cr(VI)"),
-    ("Dataset III", "Ibuprofen"),
+    ("Dataset III", "IBU"),
     ("Dataset III", "CBZ"),
 ]
 
@@ -76,17 +78,37 @@ def registry_spec(dataset: str) -> tuple[Path, str, str]:
     raise ValueError(f"No traceable material registry for {dataset}")
 
 
-def load_task(dataset: str, contaminant: str) -> tuple[pd.DataFrame, list[str]]:
+def load_task(
+    dataset: str,
+    contaminant: str,
+    analysis_copy_path: Path | None = None,
+    analysis_roles: set[str] | None = None,
+) -> tuple[pd.DataFrame, list[str]]:
     cfg = DATASETS[dataset]
     features = [column for column in FEATURE_SET_BUILDERS["Full"](cfg) if column]
-    frame = pd.read_excel(ROOT / cfg.file).copy()
+    if analysis_copy_path is not None:
+        from audited_input import load_audited_task
+
+        return load_audited_task(
+            analysis_copy_path,
+            dataset=dataset,
+            contaminant=contaminant,
+            features=features,
+            target_column=cfg.target_col,
+            allowed_roles=(
+                {"training_primary_source_audited_candidate"}
+                if analysis_roles is None
+                else analysis_roles
+            ),
+        )
+    frame = add_condition_features(
+        pd.read_excel(ROOT / cfg.file).copy(), dataset
+    )
     frame.insert(0, "source_table_row_id", np.arange(len(frame), dtype=int))
     frame["task_norm"] = frame[cfg.task_col].map(normalize_text)
     required = features + [cfg.target_col, "Adsorbent"]
-    if dataset == "Dataset III" and contaminant == "Ibuprofen":
-        task_mask = frame["task_norm"].isin(
-            [normalize_text(cfg.display_to_task[name]) for name in ("IBU", "IBF")]
-        )
+    if dataset == "Dataset III" and contaminant in {"IBU", "Ibuprofen"}:
+        task_mask = frame["task_norm"].isin(["IBU", "IBF"])
     else:
         task_mask = frame["task_norm"] == normalize_text(cfg.display_to_task[contaminant])
     task = (
@@ -133,11 +155,24 @@ def load_task(dataset: str, contaminant: str) -> tuple[pd.DataFrame, list[str]]:
     return task, features
 
 
-def build_manifest(path: Path) -> pd.DataFrame:
+def build_manifest(
+    path: Path,
+    *,
+    analysis_copy_path: Path | None = None,
+    analysis_roles: set[str] | None = None,
+    tasks: list[tuple[str, str]] | None = None,
+) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     array_id = 0
-    for task_order, (dataset, contaminant) in enumerate(TASKS, start=1):
-        task, _ = load_task(dataset, contaminant)
+    selected_tasks = TASKS if tasks is None else tasks
+    for dataset, contaminant in selected_tasks:
+        task_order = TASKS.index((dataset, contaminant)) + 1
+        task, _ = load_task(
+            dataset,
+            contaminant,
+            analysis_copy_path,
+            analysis_roles=analysis_roles,
+        )
         for group_code, held_out in task.groupby("material_group_code", sort=True):
             array_id += 1
             groups = held_out["material_group"].unique()
@@ -153,11 +188,15 @@ def build_manifest(path: Path) -> pd.DataFrame:
                     "material_group_code": int(group_code),
                     "material_group": str(groups[0]),
                     "test_n": len(held_out),
+                    "test_task_row_ids_json": json.dumps(
+                        held_out["task_row_id"].astype(int).tolist()
+                    ),
                     "task_n_rows": len(task),
                     "task_n_material_groups": task["material_group"].nunique(),
                 }
             )
     manifest = pd.DataFrame(rows)
+    validate_manifest(manifest, require_complete_task_set=tasks is None)
     path.parent.mkdir(parents=True, exist_ok=True)
     manifest.to_csv(path, index=False)
     total_rows = int(manifest.groupby("task_order")["task_n_rows"].first().sum())
@@ -169,8 +208,94 @@ def build_manifest(path: Path) -> pd.DataFrame:
     return manifest
 
 
-def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: int) -> None:
+def validate_manifest(
+    manifest: pd.DataFrame, *, require_complete_task_set: bool = False
+) -> None:
+    """Reject a material-holdout manifest whose fold identities are ambiguous."""
+    required = {
+        "array_id",
+        "task_order",
+        "dataset",
+        "contaminant",
+        "fold_id",
+        "material_group_code",
+        "material_group",
+        "test_n",
+        "test_task_row_ids_json",
+        "task_n_rows",
+        "task_n_material_groups",
+    }
+    missing = required.difference(manifest.columns)
+    if missing:
+        raise RuntimeError(f"Material-holdout manifest is missing columns: {sorted(missing)}")
+    if manifest["array_id"].duplicated().any():
+        raise RuntimeError("Material-holdout manifest contains duplicate array IDs.")
+    if manifest[["dataset", "contaminant", "fold_id"]].duplicated().any():
+        raise RuntimeError("Material-holdout manifest contains duplicate task/fold IDs.")
+
+    expected_tasks = set(TASKS)
+    observed_tasks = set(
+        zip(manifest["dataset"].astype(str), manifest["contaminant"].astype(str))
+    )
+    if require_complete_task_set and observed_tasks != expected_tasks:
+        missing_tasks = sorted(expected_tasks - observed_tasks)
+        unexpected_tasks = sorted(observed_tasks - expected_tasks)
+        raise RuntimeError(
+            "Material-holdout manifest task set differs from TASKS: "
+            f"missing={missing_tasks}, unexpected={unexpected_tasks}."
+        )
+    unexpected_tasks = sorted(observed_tasks - expected_tasks)
+    if unexpected_tasks:
+        raise RuntimeError(
+            "Material-holdout manifest contains tasks not defined in TASKS: "
+            f"{unexpected_tasks}."
+        )
+    task_orders = manifest.groupby(["dataset", "contaminant"])["task_order"].unique()
+    for task_key, values in task_orders.items():
+        if len(values) != 1 or int(values[0]) != TASKS.index(task_key) + 1:
+            raise RuntimeError(
+                f"Material-holdout task order is inconsistent for {task_key}: {values}."
+            )
+
+    for (dataset, contaminant), task_manifest in manifest.groupby(
+        ["dataset", "contaminant"], sort=False
+    ):
+        if len(task_manifest) != int(task_manifest["task_n_material_groups"].iloc[0]):
+            raise RuntimeError(f"Manifest fold count is inconsistent for {dataset} / {contaminant}.")
+        if task_manifest["task_n_rows"].nunique() != 1:
+            raise RuntimeError(f"Manifest task row counts are inconsistent for {dataset} / {contaminant}.")
+        expected_folds = set(range(1, len(task_manifest) + 1))
+        if set(task_manifest["fold_id"].astype(int)) != expected_folds:
+            raise RuntimeError(f"Manifest fold IDs are not contiguous for {dataset} / {contaminant}.")
+        if task_manifest["material_group"].duplicated().any():
+            raise RuntimeError(f"Manifest material groups are duplicated for {dataset} / {contaminant}.")
+        all_test_rows: list[int] = []
+        for _, row in task_manifest.iterrows():
+            try:
+                test_rows = [int(value) for value in json.loads(str(row["test_task_row_ids_json"]))]
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise RuntimeError("Manifest contains invalid test_task_row_ids_json.") from exc
+            if len(test_rows) != int(row["test_n"]) or len(set(test_rows)) != len(test_rows):
+                raise RuntimeError("Manifest test-row identities do not match test_n.")
+            if any(value < 0 or value >= int(row["task_n_rows"]) for value in test_rows):
+                raise RuntimeError("Manifest contains a test row outside the task row range.")
+            all_test_rows.extend(test_rows)
+        if len(all_test_rows) != int(task_manifest["task_n_rows"].iloc[0]):
+            raise RuntimeError(f"Manifest test rows do not cover the task exactly for {dataset} / {contaminant}.")
+        if set(all_test_rows) != set(range(int(task_manifest["task_n_rows"].iloc[0]))):
+            raise RuntimeError(f"Manifest test rows do not cover every task row for {dataset} / {contaminant}.")
+
+
+def run_array_fold(
+    array_id: int,
+    manifest_path: Path,
+    out_dir: Path,
+    n_jobs: int,
+    analysis_copy_path: Path | None = None,
+    analysis_roles: set[str] | None = None,
+) -> None:
     manifest = pd.read_csv(manifest_path)
+    validate_manifest(manifest)
     selected = manifest[manifest["array_id"] == array_id]
     if len(selected) != 1:
         raise RuntimeError(f"Array ID {array_id} did not identify exactly one manifest row.")
@@ -180,17 +305,32 @@ def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: in
     fold_id = int(row["fold_id"])
     task_order = int(row["task_order"])
     held_out_code = int(row["material_group_code"])
-    task, features = load_task(dataset, contaminant)
+    task, features = load_task(
+        dataset,
+        contaminant,
+        analysis_copy_path,
+        analysis_roles=analysis_roles,
+    )
 
     train_index = np.flatnonzero(task["material_group_code"].to_numpy() != held_out_code)
     test_index = np.flatnonzero(task["material_group_code"].to_numpy() == held_out_code)
     if len(test_index) != int(row["test_n"]):
         raise RuntimeError("Manifest and reconstructed test-fold sizes differ.")
+    expected_test_rows = set(int(value) for value in json.loads(str(row["test_task_row_ids_json"])))
+    observed_test_rows = set(task.iloc[test_index]["task_row_id"].astype(int))
+    if observed_test_rows != expected_test_rows:
+        raise RuntimeError("Manifest and reconstructed test-fold row identities differ.")
 
     x = task[features]
     cfg = DATASETS[dataset]
     y = task[cfg.target_col].astype(float)
     groups = task["material_group_code"].astype(int)
+    concentration_col = cfg.condition_concentration_col
+    if concentration_col not in task.columns:
+        raise RuntimeError(
+            f"{dataset} / {contaminant} is missing its recorded concentration column: "
+            f"{concentration_col}"
+        )
     print(
         f"[{array_id}/{len(manifest)}] {dataset} / {contaminant} / fold {fold_id}: "
         f"{row['material_group']}",
@@ -213,15 +353,34 @@ def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: in
 
     prediction_rows = []
     for position, task_index in enumerate(test_index):
+        record = task.iloc[task_index]
         prediction_rows.append(
             {
                 "dataset": dataset,
                 "contaminant": contaminant,
                 "task_row_id": int(task.iloc[task_index]["task_row_id"]),
                 "source_table_row_id": int(task.iloc[task_index]["source_table_row_id"]),
+                "source_task_row_id": int(record.get("source_task_row_id", record["task_row_id"])),
                 "fold_id": fold_id,
                 "material_group": material_group,
                 "material_group_code": held_out_code,
+                "source_study_id": str(record.get("source_study_id", "")),
+                "analysis_source_series": str(record.get("analysis_source_series", "")),
+                "input_contract": str(record.get("input_contract", "raw_workbook_registry_v1")),
+                "condition_concentration_column": concentration_col,
+                "condition_concentration_model": float(record[concentration_col]),
+                "condition_concentration_raw": float(
+                    record.get("C0_raw", record[concentration_col])
+                    if dataset == "Dataset I"
+                    else record[concentration_col]
+                ),
+                # Retain the historical aliases for downstream Dataset I checks.
+                "C0_model": float(record[concentration_col]),
+                "C0_raw": float(
+                    record.get("C0_raw", record[concentration_col])
+                    if dataset == "Dataset I"
+                    else record[concentration_col]
+                ),
                 "y_true": float(y_test[position]),
                 "y_pred": float(prediction[position]),
                 "train_mean": train_mean,
@@ -240,6 +399,8 @@ def run_array_fold(array_id: int, manifest_path: Path, out_dir: Path, n_jobs: in
                 "material_group_code": held_out_code,
                 "test_n": len(test_index),
                 "test_response_variance": float(np.var(y_test, ddof=0)),
+                "input_contract": str(task.iloc[0].get("input_contract", "raw_workbook_registry_v1")),
+                "analysis_source_series": str(task.iloc[0].get("analysis_source_series", "")),
                 "test_r2_diagnostic": safe_r2(y_test, prediction),
                 "test_mae": float(mean_absolute_error(y_test, prediction)),
                 "test_rmse": float(np.sqrt(mean_squared_error(y_test, prediction))),
@@ -287,6 +448,7 @@ def merge_shards(
     bootstrap_reps: int,
 ) -> None:
     manifest = pd.read_csv(manifest_path)
+    validate_manifest(manifest)
     expected = len(manifest)
     file_sets = {
         "predictions": sorted(shard_dir.glob("shard_*_predictions.csv")),
@@ -302,8 +464,16 @@ def merge_shards(
     candidates = pd.concat([pd.read_csv(path) for path in file_sets["candidates"]], ignore_index=True)
     if diagnostics["array_id"].nunique() != expected or len(diagnostics) != expected:
         raise RuntimeError("Merged diagnostics do not contain one row per manifest fold.")
-    if len(predictions) != 3512:
-        raise RuntimeError(f"Expected 3512 OOF predictions; found {len(predictions)}.")
+    expected_task_rows = (
+        manifest.groupby(["dataset", "contaminant"], as_index=False)["task_n_rows"]
+        .first()
+    )
+    expected_rows = int(expected_task_rows["task_n_rows"].sum())
+    if len(predictions) != expected_rows:
+        raise RuntimeError(
+            f"Expected {expected_rows} OOF predictions from the manifest; "
+            f"found {len(predictions)}."
+        )
     if not diagnostics["selection_metric"].eq("group_mae").all():
         raise RuntimeError(
             "At least one outer fold did not use group-balanced MAE selection."
@@ -320,6 +490,15 @@ def merge_shards(
             (diagnostics["dataset"] == dataset)
             & (diagnostics["contaminant"] == contaminant)
         ]
+        manifest_task_rows = expected_task_rows[
+            (expected_task_rows["dataset"] == dataset)
+            & (expected_task_rows["contaminant"] == contaminant)
+        ]
+        if len(manifest_task_rows) != 1:
+            raise RuntimeError(f"Manifest lacks a unique task row count for {dataset} / {contaminant}.")
+        expected_task_n = int(manifest_task_rows["task_n_rows"].iloc[0])
+        if len(task) != expected_task_n or task["task_row_id"].nunique() != expected_task_n:
+            raise RuntimeError(f"OOF coverage is incomplete for {dataset} / {contaminant}.")
         summaries.append(
             {
                 "dataset": dataset,
@@ -380,13 +559,52 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--n-jobs", type=int, default=4)
     parser.add_argument("--bootstrap-reps", type=int, default=2000)
+    parser.add_argument(
+        "--analysis-copy",
+        type=Path,
+        default=None,
+        help="Optional source-audited analysis copy; raw workbooks remain the default.",
+    )
+    parser.add_argument(
+        "--analysis-role",
+        action="append",
+        default=None,
+        help="Allowed analysis-copy role; repeat for multiple roles. Defaults to primary.",
+    )
+    parser.add_argument(
+        "--task",
+        action="append",
+        default=None,
+        metavar="DATASET::CONTAMINANT",
+        help="Restrict --write-manifest to one or more tasks.",
+    )
     args = parser.parse_args()
 
     if args.write_manifest:
-        build_manifest(args.manifest)
+        selected_tasks = None
+        if args.task:
+            selected_tasks = []
+            for value in args.task:
+                if "::" not in value:
+                    parser.error("--task must use DATASET::CONTAMINANT syntax.")
+                dataset, contaminant = value.split("::", 1)
+                selected_tasks.append((dataset, contaminant))
+        build_manifest(
+            args.manifest,
+            analysis_copy_path=args.analysis_copy,
+            analysis_roles=set(args.analysis_role) if args.analysis_role else None,
+            tasks=selected_tasks,
+        )
         return
     if args.array_id is not None:
-        run_array_fold(args.array_id, args.manifest, args.shard_dir, args.n_jobs)
+        run_array_fold(
+            args.array_id,
+            args.manifest,
+            args.shard_dir,
+            args.n_jobs,
+            analysis_copy_path=args.analysis_copy,
+            analysis_roles=set(args.analysis_role) if args.analysis_role else None,
+        )
         return
     if args.merge_shards:
         merge_shards(args.manifest, args.shard_dir, args.out_dir, args.bootstrap_reps)

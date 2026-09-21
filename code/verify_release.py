@@ -221,6 +221,8 @@ def verify_staged_retention() -> dict[str, float | int]:
     sources = pd.read_csv(directory / "study_block_results.csv")
     comparators = pd.read_csv(directory / "comparator_results_by_panel.csv")
     comparator_summary = pd.read_csv(directory / "comparator_summary.csv")
+    practical_panel = pd.read_csv(directory / "practical_equivalence_by_panel.csv")
+    practical_summary = pd.read_csv(directory / "practical_equivalence_summary.csv")
     assert panels.study_id.nunique() == 6
     assert len(panels) == 14
     assert len(queries) == 59
@@ -253,6 +255,31 @@ def verify_staged_retention() -> dict[str, float | int]:
         / comparators.complete_measurements.sum()
     )
     close(pooled_single_reduction, 0.3545081967213115)
+    assert len(practical_panel) == 42
+    assert practical_panel.panel_id.nunique() == 14
+    assert set(practical_panel.epsilon_fraction) == {0.0, 0.01, 0.05}
+    assert practical_panel.analysis_status.eq(
+        "exploratory_post_hoc_sensitivity_not_primary"
+    ).all()
+    assert practical_panel.raw_values_changed.eq("no").all()
+    practical_all = practical_summary[
+        practical_summary.evidence_subset.eq("all_archived_panels")
+    ]
+    assert practical_all.epsilon_fraction.tolist() == [0.0, 0.01, 0.05]
+    close(
+        practical_all.loc[
+            practical_all.epsilon_fraction.eq(0.0),
+            "query_weighted_epsilon_best_coverage",
+        ].iloc[0],
+        57 / 59,
+    )
+    close(
+        practical_all.loc[
+            practical_all.epsilon_fraction.eq(0.05),
+            "query_weighted_epsilon_best_coverage",
+        ].iloc[0],
+        58 / 59,
+    )
     return {
         "study_blocks": len(sources),
         "panels": len(panels),
@@ -263,6 +290,12 @@ def verify_staged_retention() -> dict[str, float | int]:
             all_panels.single_boundary_query_weighted_coverage
         ),
         "single_boundary_cell_reduction": float(pooled_single_reduction),
+        "five_percent_near_best_coverage": float(
+            practical_all.loc[
+                practical_all.epsilon_fraction.eq(0.05),
+                "query_weighted_epsilon_best_coverage",
+            ].iloc[0]
+        ),
     }
 
 
@@ -281,9 +314,9 @@ def main() -> None:
     application = verify_staged_retention()
 
     report = [
-        "# Release audit",
+        "# Historical release audit",
         "",
-        "Status: PASS",
+        "Status: PASS for the historical release only; not a current benchmark certification.",
         "",
         "- Staged-retention rule specification: valid",
         f"- Biochar holdout: {material['tasks']} tasks, {material['outer_folds']} folds, median material-balanced Q2 = {material['median_q2']:.3f}",
@@ -294,8 +327,9 @@ def main() -> None:
         f"- Archived source screen: {screen['screened_records']} records screened, {screen['included_records']} included, {screen['panels']} panels and {screen['panel_rows']} tabulated responses",
         f"- Staged retention: {application['best_retained']}/{application['nonpilot_conditions']} nonpilot best candidates retained; pooled candidate-condition cell reduction = {100 * application['pooled_cell_reduction']:.1f}%",
         f"- One-boundary comparator: retention = {100 * application['single_boundary_retention']:.1f}%; pooled candidate-condition cell reduction = {100 * application['single_boundary_cell_reduction']:.1f}%",
+        f"- Practical-equivalence sensitivity: 0% margin = {application['best_retained']}/{application['nonpilot_conditions']}; 5% within-stratum range margin = {100 * application['five_percent_near_best_coverage']:.1f}% coverage; exploratory only",
         "",
-        "The audit verifies the released numerical analysis. It does not convert retrospective evidence into a prospective performance guarantee.",
+        "The audit verifies the historical numerical release. It does not certify the current source-audited scoped rerun, convert retrospective evidence into a prospective performance guarantee, or authorize the old headline values for a new manuscript.",
     ]
     output = RESULTS / "release_audit_report.md"
     output.write_text("\n".join(report) + "\n", encoding="utf-8")

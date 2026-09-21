@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,13 +30,68 @@ MANUSCRIPT_ORDER = [
     ("Dataset II", "Sr (II)"),
     ("Dataset II", "Fe (III)"),
     ("Dataset II", "Cr(VI)"),
-    ("Dataset III", "Ibuprofen"),
+    ("Dataset III", "IBU"),
     ("Dataset III", "CBZ"),
 ]
 
 
 def normalize_text(value: object) -> str:
     return str(value).replace("\xa0", "").strip()
+
+
+def _category_key(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "", normalize_text(value).lower())
+
+
+def add_condition_features(frame: pd.DataFrame, dataset: str) -> pd.DataFrame:
+    """Add numeric condition indicators without changing recorded source fields.
+
+    Dataset II and Dataset III contain categorical water/anion or adsorption
+    states that must remain available to an intended-response model. The raw
+    columns are preserved; only deterministic analysis features are added.
+    """
+    result = frame.copy()
+    if dataset == "Dataset II":
+        keys = result["Anion_type"].map(_category_key)
+        unknown = sorted(set(keys.dropna()) - {"free", "cl"})
+        if unknown:
+            raise RuntimeError(f"Unknown Dataset II anion categories: {unknown}")
+        result["condition_anion_free"] = keys.eq("free").astype(int)
+        result["condition_anion_chloride"] = keys.eq("cl").astype(int)
+    elif dataset == "Dataset III":
+        matrix_keys = result["Wastewater type"].map(_category_key)
+        known_matrix = {
+            "groundwater",
+            "lakewater",
+            "secondaryeffluent",
+            "synthetic",
+        }
+        unknown_matrix = sorted(set(matrix_keys.dropna()) - known_matrix)
+        if unknown_matrix:
+            raise RuntimeError(
+                f"Unknown Dataset III water-matrix categories: {unknown_matrix}"
+            )
+        for key, column in [
+            ("groundwater", "condition_matrix_groundwater"),
+            ("lakewater", "condition_matrix_lakewater"),
+            ("secondaryeffluent", "condition_matrix_secondary_effluent"),
+            ("synthetic", "condition_matrix_synthetic"),
+        ]:
+            result[column] = matrix_keys.eq(key).astype(int)
+
+        adsorption_keys = result["Adsorption type"].map(_category_key)
+        unknown_adsorption = sorted(
+            set(adsorption_keys.dropna()) - {"single", "competative", "competitive"}
+        )
+        if unknown_adsorption:
+            raise RuntimeError(
+                f"Unknown Dataset III adsorption-type categories: {unknown_adsorption}"
+            )
+        result["condition_adsorption_single"] = adsorption_keys.eq("single").astype(int)
+        result["condition_adsorption_competitive"] = adsorption_keys.isin(
+            ["competative", "competitive"]
+        ).astype(int)
+    return result
 
 
 def rmse_score(y_true: pd.Series, y_pred: np.ndarray) -> float:
@@ -67,6 +123,7 @@ class DatasetConfig:
     file: str
     task_col: str
     target_col: str
+    condition_concentration_col: str
     group_mode: str
     display_to_task: dict[str, str]
     bp_cols: tuple[str, ...]
@@ -116,6 +173,7 @@ DATASETS = OrderedDict(
             file="data/benchmark/HM2.xlsx",
             task_col="HM",
             target_col="Eta",
+            condition_concentration_col="C0",
             group_mode="adsorbent",
             display_to_task={
                 "Cd (II)": "Cd2+",
@@ -134,6 +192,7 @@ DATASETS = OrderedDict(
             file="data/benchmark/HMI_data.xlsx",
             task_col="Metal type",
             target_col="qe",
+            condition_concentration_col="Ci",
             group_mode="adsorbent",
             display_to_task={
                 "Sr (II)": "Sr(II)",
@@ -165,6 +224,8 @@ DATASETS = OrderedDict(
                 "adsorption_temp",
                 "Ion Concentration (M)",
                 "DOM",
+                "condition_anion_free",
+                "condition_anion_chloride",
             ),
         ),
         "Dataset III": DatasetConfig(
@@ -173,10 +234,10 @@ DATASETS = OrderedDict(
             file="data/benchmark/EC.xlsx",
             task_col="Pollutant",
             target_col="Capacity",
+            condition_concentration_col="Initial concentration",
             group_mode="adsorbent",
             display_to_task={
-                "Ibuprofen": "IBU+IBF",
-                "IBU": "IBU",
+                "IBU": "IBU+IBF",
                 "IBF": "IBF",
                 "CBZ": "CBZ",
             },
@@ -205,6 +266,12 @@ DATASETS = OrderedDict(
                 "Adsorption temperature",
                 "Ion concentration",
                 "Humic acid",
+                "condition_matrix_groundwater",
+                "condition_matrix_lakewater",
+                "condition_matrix_secondary_effluent",
+                "condition_matrix_synthetic",
+                "condition_adsorption_single",
+                "condition_adsorption_competitive",
             ),
         ),
     }
@@ -367,7 +434,9 @@ def is_feature_set_applicable(cfg: DatasetConfig, feature_set: str) -> tuple[boo
 
 
 def prepare_task_subset(cfg: DatasetConfig, task_key: str, feature_set: str) -> tuple[pd.DataFrame, list[str]]:
-    df = pd.read_excel(ROOT / cfg.file).copy()
+    df = add_condition_features(
+        pd.read_excel(ROOT / cfg.file).copy(), cfg.label
+    )
     df["task_norm"] = df[cfg.task_col].map(normalize_text)
     task_norm = normalize_text(task_key)
     selected_cols = [c for c in FEATURE_SET_BUILDERS[feature_set](cfg) if c in df.columns]
@@ -411,7 +480,7 @@ def run_stage_search(
     seed: int,
     n_jobs: int,
     stage_name: str,
-    selection_metric: str = "r2",
+    selection_metric: str = "group_mae",
 ) -> dict[str, object]:
     inner_cv = build_inner_cv(split_kind, len(x_train), groups_train, seed)
     if selection_metric == "group_mae":
@@ -425,45 +494,87 @@ def run_stage_search(
                 groups_train.copy(), "mse", n_splits
             ),
         }
-        refit = "group_mae"
     elif selection_metric == "r2":
         scoring = SCORING
-        refit = "r2"
     else:
         raise ValueError(f"Unsupported selection metric: {selection_metric}")
     search = GridSearchCV(
         estimator=spec.estimator_factory(),
         param_grid=grid,
         scoring=scoring,
-        refit=refit,
+        refit=False,
         cv=inner_cv,
         n_jobs=n_jobs,
         error_score="raise",
     )
     fit_kwargs = {"groups": groups_train} if split_kind == "LOBO" else {}
     search.fit(x_train, y_train, **fit_kwargs)
-    best_idx = int(search.best_index_)
+    cv_results = search.cv_results_
+    params = cv_results["params"]
+
+    def candidate_key(index: int) -> tuple[float, float, str]:
+        if selection_metric == "group_mae":
+            primary = -float(cv_results["mean_test_group_mae"][index])
+            secondary = float(np.sqrt(-cv_results["mean_test_group_mse"][index]))
+        else:
+            primary = -float(cv_results["mean_test_r2"][index])
+            secondary = -float(cv_results["mean_test_rmse"][index])
+        if not np.isfinite(primary):
+            primary = np.inf
+        if not np.isfinite(secondary):
+            secondary = np.inf
+        return primary, secondary, params_to_text(params[index])
+
+    best_idx = min(range(len(params)), key=candidate_key)
+    best_params = params[best_idx]
+    best_estimator = spec.estimator_factory()
+    best_estimator.set_params(**best_params)
+    best_estimator.fit(x_train, y_train)
     output = {
         "stage": stage_name,
         "model_name": spec.name,
         "selection_metric": selection_metric,
-        "best_cv_r2": float(search.cv_results_["mean_test_r2"][best_idx]),
-        "best_cv_mae": float(-search.cv_results_["mean_test_mae"][best_idx]),
-        "best_cv_rmse": float(-search.cv_results_["mean_test_rmse"][best_idx]),
-        "best_params": params_to_text(search.best_params_),
-        "best_estimator": search.best_estimator_,
+        "best_cv_r2": float(cv_results["mean_test_r2"][best_idx]),
+        "best_cv_mae": float(-cv_results["mean_test_mae"][best_idx]),
+        "best_cv_rmse": float(-cv_results["mean_test_rmse"][best_idx]),
+        "best_params": params_to_text(best_params),
+        "best_estimator": best_estimator,
+        "best_grid_index": int(best_idx),
+        "grid_size": int(len(params)),
+        "selection_tie_rule": "primary metric, secondary RMSE, lexicographic parameters",
     }
     if selection_metric == "group_mae":
         output["best_cv_group_mae"] = float(
-            -search.cv_results_["mean_test_group_mae"][best_idx]
+            -cv_results["mean_test_group_mae"][best_idx]
         )
         output["best_cv_group_rmse"] = float(
-            np.sqrt(-search.cv_results_["mean_test_group_mse"][best_idx])
+            np.sqrt(-cv_results["mean_test_group_mse"][best_idx])
         )
     else:
         output["best_cv_group_mae"] = np.nan
         output["best_cv_group_rmse"] = np.nan
     return output
+
+
+def model_selection_key(bundle: dict[str, object], selection_metric: str) -> tuple[float, float, str, str]:
+    """Return a deterministic, lower-is-better key for model selection.
+
+    The same key is used for coarse-model selection and for deciding whether
+    refinement actually improves the selected coarse configuration.
+    """
+    if selection_metric == "group_mae":
+        primary = float(bundle["best_cv_group_mae"])
+        secondary = float(bundle["best_cv_group_rmse"])
+    elif selection_metric == "r2":
+        primary = -float(bundle["best_cv_r2"])
+        secondary = float(bundle["best_cv_rmse"])
+    else:
+        raise ValueError(f"Unsupported selection metric: {selection_metric}")
+    if not np.isfinite(primary):
+        primary = np.inf
+    if not np.isfinite(secondary):
+        secondary = np.inf
+    return primary, secondary, str(bundle["model_name"]), str(bundle["best_params"])
 
 
 def fit_best_search(
@@ -473,11 +584,10 @@ def fit_best_search(
     split_kind: str,
     seed: int,
     n_jobs: int,
-    selection_metric: str = "r2",
+    selection_metric: str = "group_mae",
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
     candidate_rows: list[dict[str, object]] = []
-    coarse_best: dict[str, object] | None = None
-    winner_spec: ModelSpec | None = None
+    coarse_records: list[tuple[ModelSpec, dict[str, object]]] = []
 
     for spec in MODEL_SPECS:
         row = run_stage_search(
@@ -492,34 +602,16 @@ def fit_best_search(
             stage_name="coarse",
             selection_metric=selection_metric,
         )
+        coarse_records.append((spec, row))
         candidate_rows.append({k: v for k, v in row.items() if k != "best_estimator"})
 
-        if coarse_best is None:
-            coarse_best = row
-            winner_spec = spec
-            continue
-        if selection_metric == "group_mae":
-            better = row["best_cv_group_mae"] < coarse_best["best_cv_group_mae"]
-            tie_break = (
-                np.isclose(
-                    row["best_cv_group_mae"],
-                    coarse_best["best_cv_group_mae"],
-                )
-                and row["best_cv_group_rmse"]
-                < coarse_best["best_cv_group_rmse"]
-            )
-        else:
-            better = row["best_cv_r2"] > coarse_best["best_cv_r2"]
-            tie_break = (
-                np.isclose(row["best_cv_r2"], coarse_best["best_cv_r2"])
-                and row["best_cv_rmse"] < coarse_best["best_cv_rmse"]
-            )
-        if better or tie_break:
-            coarse_best = row
-            winner_spec = spec
-
-    if coarse_best is None or winner_spec is None:
+    if not coarse_records:
         raise RuntimeError("No model candidate could be selected.")
+
+    winner_spec, coarse_best = min(
+        coarse_records,
+        key=lambda item: model_selection_key(item[1], selection_metric),
+    )
 
     refined = run_stage_search(
         spec=winner_spec,
@@ -534,7 +626,25 @@ def fit_best_search(
         selection_metric=selection_metric,
     )
     candidate_rows.append({k: v for k, v in refined.items() if k != "best_estimator"})
-    return refined, candidate_rows
+
+    selected = min(
+        (coarse_best, refined),
+        key=lambda bundle: model_selection_key(bundle, selection_metric),
+    )
+    selected_signature = (
+        selected["stage"],
+        selected["model_name"],
+        selected["best_params"],
+    )
+    for row in candidate_rows:
+        row["selected"] = (
+            row["stage"],
+            row["model_name"],
+            row["best_params"],
+        ) == selected_signature
+    selected = dict(selected)
+    selected["selection_source"] = selected["stage"]
+    return selected, candidate_rows
 
 
 def evaluate_outer_loop(
@@ -544,6 +654,7 @@ def evaluate_outer_loop(
     split_kind: str,
     rs_repeats: int,
     n_jobs: int,
+    selection_metric: str = "group_mae",
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if split_kind == "RS":
         outer_iter = ShuffleSplit(n_splits=rs_repeats, test_size=0.2, random_state=42).split(x)
@@ -568,6 +679,7 @@ def evaluate_outer_loop(
             split_kind=split_kind,
             seed=4200 + fold_id,
             n_jobs=n_jobs,
+            selection_metric=selection_metric,
         )
 
         pred = best_bundle["best_estimator"].predict(x_test)
@@ -606,6 +718,7 @@ def run_full_data_selection(
     groups: pd.Series,
     split_kind: str,
     n_jobs: int,
+    selection_metric: str = "group_mae",
 ) -> dict[str, object]:
     best_bundle, _ = fit_best_search(
         x_train=x,
@@ -614,14 +727,19 @@ def run_full_data_selection(
         split_kind=split_kind,
         seed=777,
         n_jobs=n_jobs,
+        selection_metric=selection_metric,
     )
     return {
         "final_selected_model": best_bundle["model_name"],
         "final_selected_stage": best_bundle["stage"],
+        "final_selection_source": best_bundle["selection_source"],
+        "final_selection_metric": best_bundle["selection_metric"],
         "final_selected_params": best_bundle["best_params"],
         "final_cv_r2": best_bundle["best_cv_r2"],
         "final_cv_mae": best_bundle["best_cv_mae"],
         "final_cv_rmse": best_bundle["best_cv_rmse"],
+        "final_cv_group_mae": best_bundle["best_cv_group_mae"],
+        "final_cv_group_rmse": best_bundle["best_cv_group_rmse"],
     }
 
 
@@ -834,6 +952,7 @@ def main() -> None:
                         split_kind=split_kind,
                         rs_repeats=args.rs_repeats,
                         n_jobs=args.n_jobs,
+                        selection_metric="group_mae",
                     )
                     final_selection = run_full_data_selection(
                         x=frame[feature_cols],
@@ -841,6 +960,7 @@ def main() -> None:
                         groups=frame["__group__"],
                         split_kind=split_kind,
                         n_jobs=args.n_jobs,
+                        selection_metric="group_mae",
                     )
                     summary, fold_detail, candidate_detail = summarize_task_result(
                         manifest_row=manifest_row,

@@ -30,6 +30,7 @@ def evaluate_query(query: pd.DataFrame, retained: list[str]) -> dict[str, float]
     metrics = retention_metrics(query, retained)
     return {
         "coverage": metrics["query_best_coverage"],
+        "raw_selection_loss": metrics["mean_raw_selection_loss"],
         "normalized_regret": metrics["mean_normalized_regret"],
     }
 
@@ -42,10 +43,12 @@ def exact_equal_retention_baseline(
         for retained in combinations(candidates, retained_count)
     ]
     coverage = np.asarray([row["coverage"] for row in outcomes], dtype=float)
+    raw_loss = np.asarray([row["raw_selection_loss"] for row in outcomes], dtype=float)
     regret = np.asarray([row["normalized_regret"] for row in outcomes], dtype=float)
     return {
         "random_subsets": len(outcomes),
         "random_expected_coverage": float(coverage.mean()),
+        "random_expected_raw_selection_loss": float(raw_loss.mean()),
         "random_expected_normalized_regret": float(regret.mean()),
     }
 
@@ -69,6 +72,7 @@ def rule_for_anchors(
         "anchors": " | ".join(anchors),
         "n_retained": len(retained),
         "coverage": metrics["coverage"],
+        "raw_selection_loss": metrics["raw_selection_loss"],
         "normalized_regret": metrics["normalized_regret"],
     }
 
@@ -85,6 +89,7 @@ def single_anchor_selector(panel: pd.DataFrame, anchor: str) -> dict[str, float]
         **metrics,
         "retained_fraction": len(retained) / n_candidates,
         "measurements": cells,
+        "candidate_condition_cells": cells,
         "measurement_reduction": 1 - cells / (n_candidates * n_strata),
     }
 
@@ -97,7 +102,11 @@ def linear_interpolation_selector(
     design = design_table(panel)
     z_columns = [column for column in design if column.startswith("z")]
     if len(z_columns) != 1:
-        return {"linear_coverage": np.nan, "linear_normalized_regret": np.nan}
+        return {
+            "linear_coverage": np.nan,
+            "linear_raw_selection_loss": np.nan,
+            "linear_normalized_regret": np.nan,
+        }
     z_lookup = design.set_index("stratum_id")[z_columns[0]].to_dict()
     support = panel[panel["stratum_id"].isin(anchors)]
     query = panel[~panel["stratum_id"].isin(anchors)]
@@ -114,6 +123,7 @@ def linear_interpolation_selector(
         predictions.append(candidate_query)
     predicted = pd.concat(predictions, ignore_index=True)
     coverages: list[float] = []
+    raw_losses: list[float] = []
     regrets: list[float] = []
     for _, stratum in predicted.groupby("stratum_id"):
         retained = stratum.nlargest(retained_count, "prediction")[
@@ -121,9 +131,11 @@ def linear_interpolation_selector(
         ].tolist()
         metrics = evaluate_query(stratum, retained)
         coverages.append(metrics["coverage"])
+        raw_losses.append(metrics["raw_selection_loss"])
         regrets.append(metrics["normalized_regret"])
     return {
         "linear_coverage": float(np.mean(coverages)),
+        "linear_raw_selection_loss": float(np.mean(raw_losses)),
         "linear_normalized_regret": float(np.mean(regrets)),
     }
 
@@ -252,9 +264,13 @@ def main() -> None:
                 "n_retained": retained_count,
                 "retained_fraction": retained_count / n_candidates,
                 "complete_measurements": complete_cells,
+                "complete_candidate_condition_cells": complete_cells,
                 "rule_measurements": rule_cells,
+                "rule_candidate_condition_cells": rule_cells,
                 "measurement_reduction": 1 - rule_cells / complete_cells,
+                "candidate_condition_cell_reduction": 1 - rule_cells / complete_cells,
                 "rule_coverage": boundary_result["coverage"],
+                "rule_raw_selection_loss": boundary_result["raw_selection_loss"],
                 "rule_normalized_regret": boundary_result["normalized_regret"],
                 **random_result,
                 "coverage_lift": (
@@ -290,6 +306,9 @@ def main() -> None:
                         [value["normalized_regret"] for value in single_boundary]
                     )
                 ),
+                "single_boundary_mean_raw_selection_loss": float(
+                    np.mean([value["raw_selection_loss"] for value in single_boundary])
+                ),
                 "single_boundary_mean_retained_fraction": float(
                     np.mean([value["retained_fraction"] for value in single_boundary])
                 ),
@@ -300,6 +319,11 @@ def main() -> None:
                 ),
                 "single_boundary_mean_measurements": float(
                     np.mean([value["measurements"] for value in single_boundary])
+                ),
+                "single_boundary_mean_candidate_condition_cells": float(
+                    np.mean(
+                        [value["candidate_condition_cells"] for value in single_boundary]
+                    )
                 ),
                 **linear_result,
             }

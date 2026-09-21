@@ -35,6 +35,8 @@ def main() -> None:
         RESULTS / "sensitivity_summary.csv"
     )
     difficulty = pd.read_csv(RESULTS / "difficulty_summary.csv")
+    comparator = pd.read_csv(RESULTS / "comparator_summary.csv")
+    practical = pd.read_csv(RESULTS / "practical_equivalence_summary.csv")
 
     source_rows = []
     for row in sources.itertuples(index=False):
@@ -83,6 +85,41 @@ def main() -> None:
                 percent(row.source_balanced_mean_assay_reduction_fraction),
                 percent(row.mean_panel_query_best_coverage),
                 f"{row.mean_panel_normalized_regret:.4f}",
+            ]
+        )
+
+    practical = practical[
+        practical["evidence_subset"].eq("all_archived_panels")
+    ].sort_values("epsilon_fraction")
+    practical_rows = []
+    for row in practical.itertuples(index=False):
+        practical_rows.append(
+            [
+                f"{100 * row.epsilon_fraction:.0f}%",
+                percent(row.query_weighted_epsilon_best_coverage),
+                percent(row.study_block_balanced_epsilon_best_coverage),
+                f"{row.query_weighted_mean_normalized_regret:.4f}",
+                percent(row.pooled_candidate_condition_cell_reduction),
+            ]
+        )
+
+    scope_order = [
+        "hazard_focused",
+        "structural_sensitivity",
+        "all_archived_panels",
+    ]
+    scope_summary = comparator.set_index("evidence_subset").loc[scope_order]
+    scope_rows = []
+    for subset, row in scope_summary.iterrows():
+        scope_rows.append(
+            [
+                str(subset),
+                str(int(row.n_studies)),
+                str(int(row.n_panels)),
+                str(int(row.n_query_conditions)),
+                percent(row.rule_query_weighted_coverage),
+                percent(row.single_boundary_query_weighted_coverage),
+                percent(row.source_balanced_measurement_reduction),
             ]
         )
 
@@ -135,6 +172,15 @@ The primary rule retained a best observed candidate at every nonpilot condition 
 
 The six study blocks were not sampled from a defined population, so these values describe the archived panels rather than a literature-wide success rate.
 
+## Scope-stratified result
+
+The hazard-focused and structural-sensitivity panels are reported separately. The structural-sensitivity panels are not evidence for hazardous-contaminant performance or environmental relevance.
+
+{markdown_table(
+    ['Evidence subset', 'Study blocks', 'Panels', 'Nonpilot strata', 'Two-boundary coverage', 'One-boundary coverage', 'Two-boundary cell reduction'],
+    scope_rows,
+)}
+
 ## Observed misses
 
 The primary rule missed a best observed candidate at two intermediate Pb concentrations in one Ogbuagu wheat-straw panel.
@@ -171,6 +217,15 @@ The top-half row is the primary rule. The other retained fractions are sensitivi
 )}
 
 The exploratory top-two-thirds rule retained all best observed candidates in the six study blocks but reduced candidate-condition cells by only {percent(float(sensitivity.loc[sensitivity['strategy'].eq('ever_top_two_thirds'), 'source_balanced_mean_assay_reduction_fraction'].iloc[0]))}.
+
+## Practical-equivalence sensitivity
+
+The primary endpoint treats only the highest recorded response as best. The following post hoc sensitivity treats candidates within the stated fraction of the within-stratum response range as near-best. These margins are not measurement-error estimates and do not change the primary result.
+
+{markdown_table(
+    ['Near-best margin', 'Query-weighted coverage', 'Study-block-balanced coverage', 'Mean normalized regret', 'Pooled cell reduction'],
+    practical_rows,
+)}
 
 ## Intended use
 

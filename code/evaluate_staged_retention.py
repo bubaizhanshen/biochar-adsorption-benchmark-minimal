@@ -203,8 +203,11 @@ def main() -> None:
                 "candidate_reduction_fraction": 1 - len(retained) / candidates,
                 "baseline_assay_units": candidates * strata,
                 "protocol_assay_units": retained_assays,
+                "baseline_candidate_condition_cells": candidates * strata,
+                "staged_candidate_condition_cells": retained_assays,
                 "assay_reduction_fraction": 1 - retained_assays / (candidates * strata),
                 **metrics,
+                "mean_raw_selection_loss": metrics["mean_regret"],
                 **simulated_coverage(panel, anchors, protocol["protocol_id"]),
             }
         )
@@ -245,6 +248,7 @@ def main() -> None:
                 "mean_normalized_regret": float(
                     class_queries["normalized_regret"].mean()
                 ),
+                "mean_raw_selection_loss": float(class_queries["regret"].mean()),
                 "source_balanced_mean_assay_reduction_fraction": float(
                     np.mean(source_reductions)
                 ),
@@ -277,6 +281,7 @@ def main() -> None:
                 "n_failed_query_strata": int((~source_queries["best_retained"]).sum()),
                 "query_best_coverage": float(source_queries["best_retained"].mean()),
                 "mean_normalized_regret": float(source_queries["normalized_regret"].mean()),
+                "mean_raw_selection_loss": float(source_queries["regret"].mean()),
                 "max_normalized_regret": float(source_queries["normalized_regret"].max()),
                 "max_relative_regret_to_best": float(
                     source_queries["relative_regret_to_best"].max()

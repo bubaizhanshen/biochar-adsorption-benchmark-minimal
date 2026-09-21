@@ -65,6 +65,8 @@ def main() -> None:
                     "candidate_reduction_fraction": 1 - len(retained) / candidates,
                     "baseline_assay_units": baseline,
                     "protocol_assay_units": protocol_units,
+                    "baseline_candidate_condition_cells": baseline,
+                    "staged_candidate_condition_cells": protocol_units,
                     "assay_reduction_fraction": 1 - protocol_units / baseline,
                     **metrics,
                 }
@@ -128,6 +130,9 @@ def main() -> None:
                 ),
                 "mean_panel_normalized_regret": float(
                     panel_frame["mean_normalized_regret"].mean()
+                ),
+                "mean_panel_raw_selection_loss": float(
+                    panel_frame["mean_regret"].mean()
                 ),
             }
         )

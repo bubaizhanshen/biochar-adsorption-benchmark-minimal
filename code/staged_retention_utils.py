@@ -92,7 +92,56 @@ def retention_metrics(
     return {
         "query_best_coverage": float(np.mean(coverage)),
         "mean_regret": float(np.mean(regrets)),
+        "mean_raw_selection_loss": float(np.mean(regrets)),
         "mean_normalized_regret": float(np.nanmean(normalized_regrets)),
+    }
+
+
+def epsilon_best_candidates(
+    stratum: pd.DataFrame, epsilon_fraction: float
+) -> set[str]:
+    """Return candidates within a fraction of the observed response range."""
+    if epsilon_fraction < 0:
+        raise ValueError("epsilon_fraction must be non-negative")
+    maximum = float(stratum["response"].max())
+    response_range = float(np.ptp(stratum["response"].to_numpy(float)))
+    threshold = maximum - epsilon_fraction * response_range
+    tolerance = max(1e-12, abs(maximum) * 1e-12)
+    return set(
+        stratum.loc[
+            stratum["response"] >= threshold - tolerance, "candidate_id"
+        ].astype(str)
+    )
+
+
+def practical_equivalence_metrics(
+    query: pd.DataFrame,
+    retained: list[str],
+    epsilon_fraction: float,
+) -> dict[str, float]:
+    """Evaluate retention of candidates within an epsilon-best margin."""
+    if not retained:
+        raise ValueError("retained candidate set cannot be empty")
+    hits: list[float] = []
+    regrets: list[float] = []
+    normalized_regrets: list[float] = []
+    for _, stratum in query.groupby("stratum_id"):
+        epsilon_best = epsilon_best_candidates(stratum, epsilon_fraction)
+        retained_rows = stratum[stratum["candidate_id"].isin(retained)]
+        maximum = float(stratum["response"].max())
+        retained_maximum = float(retained_rows["response"].max())
+        response_range = float(np.ptp(stratum["response"].to_numpy(float)))
+        regret = maximum - retained_maximum
+        hits.append(float(bool(epsilon_best.intersection(retained))))
+        regrets.append(regret)
+        normalized_regrets.append(
+            regret / response_range if response_range > 0 else 0.0
+        )
+    return {
+        "epsilon_best_coverage": float(np.mean(hits)),
+        "mean_regret": float(np.mean(regrets)),
+        "mean_normalized_regret": float(np.mean(normalized_regrets)),
+        "max_normalized_regret": float(np.max(normalized_regrets)),
     }
 
 

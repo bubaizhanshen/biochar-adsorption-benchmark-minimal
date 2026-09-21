@@ -1,6 +1,14 @@
 .venv/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *.tiff
 .DS_Store
 work/
+
+# Project-local scoped reruns are kept outside the minimal public release.
+results/holdout/current_training_gate_primary_v1/
+results/holdout/source_audited_*/
+results/holdout/strict_source_audited_v1/
+results/holdout/*/shards/
+results/staged_retention/practical_equivalence_*.csv

@@ -1,4 +1,4 @@
-# Staged-retention rule evaluation
+# Archived staged-retention rule evaluation
 
 ## Scientific question
 
@@ -12,7 +12,13 @@ Can two boundary conditions selected without response information reduce a fixed
 
 ## Evidence base
 
-The primary evaluation contains 6 reconstructed study blocks, 14 eligible panels, and 59 nonpilot condition strata. It spans heavy metals, phosphate, urea, methylene blue, and 17β-estradiol. Repository discovery was targeted rather than a probability sample.
+The raw archive contains 6 reconstructed study blocks, 14 archived panels, and
+59 nonpilot condition strata. It spans heavy metals, phosphate, urea, methylene
+blue, and 17β-estradiol. Repository discovery was targeted rather than a
+probability sample. After material-family review, 11 panels from 5 study blocks
+form the independent primary sensitivity-gated layer; 3 Soria2020 panels remain
+in a provenance sensitivity layer. The gated summary is recorded in the
+project preparation workspace alongside the source-audit package.
 
 | Study block | Panels | Nonpilot strata | All best retained | Retention | Cell reduction | Maximum relative regret |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -23,11 +29,21 @@ The primary evaluation contains 6 reconstructed study blocks, 14 eligible panels
 | Wang2021 | 1 | 10 | yes | 100.0% | 16.7% | 0.00% |
 | Wei2025 | 4 | 17 | yes | 100.0% | 16.0% | 0.00% |
 
-## Primary result
+## All-archive sensitivity result
 
-The primary rule retained a best observed candidate at every nonpilot condition in 5 of 6 study blocks. Across conditions, 57 of 59 best observed candidates were retained (96.6%). Study-block-balanced candidate-condition cell reduction was 19.8%, and pooled cell reduction was 21.1%.
+The two-boundary rule retained a best observed candidate at every nonpilot condition in 5 of 6 study blocks. Across the raw archive, 57 of 59 best observed candidates were retained (96.6%). Study-block-balanced candidate-condition cell reduction was 19.8%, and pooled cell reduction was 21.1%. These are all-archive sensitivity values, not the independent material-gated primary summary.
 
 The six study blocks were not sampled from a defined population, so these values describe the archived panels rather than a literature-wide success rate.
+
+## Scope-stratified result
+
+The hazard-focused and structural-sensitivity panels are reported separately. The structural-sensitivity panels are not evidence for hazardous-contaminant performance or environmental relevance. Soria2020 is also separated as a material-provenance sensitivity because its WSP550 identity cannot be confirmed independently of the internal source registry.
+
+| Evidence subset | Study blocks | Panels | Nonpilot strata | Two-boundary coverage | One-boundary coverage | Two-boundary cell reduction |
+| --- | --- | --- | --- | --- | --- | --- |
+| hazard_focused | 3 | 7 | 28 | 92.9% | 87.1% | 19.8% |
+| structural_sensitivity | 4 | 7 | 31 | 100.0% | 100.0% | 17.6% |
+| all_archived_panels | 6 | 14 | 59 | 96.6% | 93.8% | 19.8% |
 
 ## Observed misses
 
@@ -68,6 +84,16 @@ The top-half row is the primary rule. The other retained fractions are sensitivi
 | retain_all | sensitivity | 6/6 | 0.0% | 100.0% | 0.0000 |
 
 The exploratory top-two-thirds rule retained all best observed candidates in the six study blocks but reduced candidate-condition cells by only 10.5%.
+
+## Practical-equivalence sensitivity
+
+The primary endpoint treats only the highest recorded response as best. The following post hoc sensitivity treats candidates within the stated fraction of the within-stratum response range as near-best. These margins are not measurement-error estimates and do not change the primary result.
+
+| Near-best margin | Query-weighted coverage | Study-block-balanced coverage | Mean normalized regret | Pooled cell reduction |
+| --- | --- | --- | --- | --- |
+| 0% | 96.6% | 95.8% | 0.0024 | 21.1% |
+| 1% | 96.6% | 95.8% | 0.0024 | 21.1% |
+| 5% | 98.3% | 97.9% | 0.0024 | 21.1% |
 
 ## Intended use
 

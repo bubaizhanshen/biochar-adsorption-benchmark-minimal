@@ -9,11 +9,39 @@ Files in `data/registries/` link source-table rows to reconstructed study blocks
 | `source_row_id` or `current_row_id` | Zero-based row position in the released source table |
 | `source_study_id` | Stable reconstructed study-block identifier; retained as a legacy field name |
 | `verified_material_group` | Study-block identifier joined to the reported within-source material label |
-| `provenance_confidence` | Material- and row-level traceability category |
+| `provenance_confidence` | Composite material-identity and response-row traceability category; the two components must be read separately |
 
 `verified_material_group` is the analytical material unit. The registry neither merges similarly named materials across study blocks nor separates unreported batches hidden behind one source label.
 
+`high material identity` does not establish a row-level response link. For example, `source response row link unresolved` records a source-supported material label whose response values still lack an authoritative source-row identifier or reproducible digitization record.
+
+## Current input-scope decisions
+
+- Dataset IV is not present in the current model input and is excluded from material-, study-block-, and candidate-panel inference because it lacks an explicit material identifier.
+- Dataset I `C0` is a compiled dose-to-material ratio. It is not treated as a directly recorded aqueous initial concentration unless a source-specific mapping audit supports that interpretation.
+- Dataset III `IBU` and `IBF` source labels are combined under the manuscript task label `IBU`; the original labels remain in the source registry and audit files.
+- Dataset II `Anion_type` and Dataset III `Wastewater type` and `Adsorption type` remain available for condition auditing and exact candidate matching. The current exploratory loader also encodes them as deterministic condition indicators; any formal rerun using these indicators must be identified as a feature-contract sensitivity.
+- Dataset-specific recorded concentration fields are `C0` for Dataset I, `Ci` for Dataset II, and `Initial concentration` for Dataset III. Prediction outputs retain explicit `condition_concentration_column`, `condition_concentration_model`, and `condition_concentration_raw` fields; the historical `C0_model` and `C0_raw` aliases remain for Dataset I compatibility.
+- Dataset II `qe` and Dataset III `Capacity` are source-defined response endpoints in mg g^-1. Dataset I `Eta` is the source-table adsorption-efficiency endpoint in mmol g^-1; these response units are not pooled across datasets.
+- The structural loader still contains source rows that are not admitted to the current scoped model manifests. In particular, PAC rows identified during the source-material audit are outside the biochar-only primary scope and must be excluded from any primary manifest without deleting them from raw inputs.
+
 ## Nested model selection
+
+### Source-audited analysis-copy input
+
+The optional audited-copy loader reads an analysis copy only when the source
+audit has preserved the raw field and recorded the mapped field, source series,
+material group, study block, response endpoint, and row-check status together.
+The raw workbook remains unchanged. For Dataset I, `analysis_C0_mg_L` is used
+as the model's `C0` only in this explicit input path; the original `C0` is
+retained as `C0_raw` and both fields are written to prediction outputs.
+
+The loader rejects failed row checks, duplicate task/source rows, missing
+material or study identities, nonpositive mapped concentrations, and roles not
+listed in the input invocation. A source-audited analysis copy is an input
+contract, not automatic evidence that the source block supports every target
+endpoint. Study-block transfer still requires enough independent study blocks
+for the declared inner grouping.
 
 Material-, study-block-, and candidate-panel fits select inner candidates by mean validation-group-balanced MAE. Group-balanced RMSE breaks numerical ties.
 
@@ -31,7 +59,7 @@ Row-weighted inner R2, MAE, and RMSE fields are retained as diagnostics, not as 
 
 ### Biochar holdout
 
-Directory: `results/holdout/biochar/`
+Directory: `results/holdout/biochar/` (historical release output)
 
 | File | Contents |
 | --- | --- |
@@ -68,9 +96,12 @@ The headline comparison uses `study_balanced_q2_biochar`, `study_balanced_q2_stu
 
 ## Candidate-panel results
 
-Directory: `results/candidate_panels/`
+Directory: `results/candidate_panels/` (historical release output)
 
-`manifest.csv` defines 12 jointly omitted panel fits. Panels 5 and 8 are sensitivity panels; the other 10 are complete single-study-block panels.
+The files in this directory describe the historical 12-panel release. They do
+not define the separate strict source-audited pilot maintained in the project
+preparation workspace. That pilot must not be merged into this historical
+candidate-panel aggregate.
 
 `full_model/` contains models using material and adsorption-condition descriptors. `condition_only_model/` contains models using adsorption-condition descriptors only. Both use the same outer candidate sets, condition strata, and group-balanced MAE selection objective.
 
@@ -117,13 +148,13 @@ Ordering inference applies one candidate-label mapping consistently to every mat
 
 ## Archived panel data
 
-Directory: `data/external_panels/`
+Directory: `data/external_panels/` (raw retrospective archive)
 
 | File | Contents |
 | --- | --- |
 | `screening_registry.csv` | All 63 screened metadata or repository records, decisions, and reasons |
 | `panel_audit.csv` | Panel-level inclusion audit |
-| `panel_responses.csv` | 488 candidate-condition responses in 14 primary panels |
+| `panel_responses.csv` | 488 candidate-condition responses in 14 archived panels; material-gated primary and sensitivity roles are applied in the project source audit |
 
 Important panel-data fields include `study_id`, `doi`, `panel_id`, `pollutant`, `candidate_id`, `stratum_id`, `response`, `response_sd`, `condition_*`, `response_type`, `source_location`, and `design_replicates`.
 
@@ -133,7 +164,7 @@ The primary two-condition rule is defined in `data/protocols/candidate_retention
 
 ## Staged-retention results
 
-Directory: `results/staged_retention/`
+Directory: `results/staged_retention/` (raw archived-panel sensitivity output)
 
 | File | Contents |
 | --- | --- |
@@ -148,7 +179,18 @@ Directory: `results/staged_retention/`
 | `comparator_results_by_panel.csv` | Equal-retention random, one-boundary, middle-pair, and interpolation comparators |
 | `anchor_pair_sensitivity.csv` | Every possible two-anchor pair in each archived panel |
 | `comparator_summary.csv` | Hazard-focused, structural-sensitivity, and all-panel summaries |
+| `practical_equivalence_by_panel.csv` | Exploratory nominal-best retention under 0%, 1%, and 5% within-stratum response-range margins |
+| `practical_equivalence_summary.csv` | Query-weighted and study-block-balanced practical-equivalence summaries |
 
 `best_retained` means that at least one candidate tied for the highest recorded mean response at that nonpilot condition remained in the retained set. `normalized_regret` is zero when a best observed candidate was retained. Candidate-condition cell reduction excludes replicate counts, setup overhead, labor, and monetary cost.
 
+The raw 14-panel output includes the Soria2020 material-provenance sensitivity.
+The material-gated primary summary (11 panels from 5 study blocks) is maintained
+with the project source audit and must be used instead of the raw archive when
+reporting an independent source summary.
+
 Legacy result fields containing `assay_units` or `assay_reduction_fraction` count candidate-condition cells. They do not denote replicate-level assays, laboratory time, or cost.
+
+The practical-equivalence files are post hoc sensitivity outputs. Their margins
+are not measurement-error estimates and do not alter the exact-best primary
+endpoint or the frozen staged-retention rule.

@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from candidate_utils import condition_key
+from candidate_utils import condition_key, recorded_condition_columns
 from modeling_core import DATASETS, fit_best_search
 from run_biochar_holdout import load_task
 
@@ -42,7 +42,8 @@ def run_panel(panel_id: int, manifest_path: Path, shard_dir: Path, n_jobs: int) 
     features = [column for column in cfg.ac_cols if column in task.columns]
     if not features:
         raise RuntimeError(f"No adsorption-condition columns available for {dataset} / {contaminant}.")
-    task["condition_key"] = condition_key(task, features)
+    condition_columns = recorded_condition_columns(dataset, task, features)
+    task["condition_key"] = condition_key(task, condition_columns)
 
     test_mask = task["material_group"].isin(candidates)
     train_index = np.flatnonzero(~test_mask.to_numpy())

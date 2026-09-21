@@ -32,13 +32,6 @@ DEFAULT_CONDITION_ONLY = (
     / "condition_only_model"
     / "predictions.csv"
 )
-DEFAULT_SOURCE_SUMMARY = (
-    ROOT
-    / "results"
-    / "holdout"
-    / "study_block"
-    / "task_summary.csv"
-)
 DEFAULT_OUT = (
     ROOT
     / "results"
@@ -54,6 +47,107 @@ def as_boolean(series: pd.Series) -> pd.Series:
     if not values.isin(["true", "false"]).all():
         raise RuntimeError("Expected a boolean-like eligible-condition column.")
     return values.eq("true")
+
+
+def validate_panel_inputs(
+    manifest: pd.DataFrame,
+    full_predictions: pd.DataFrame,
+    full_summary: pd.DataFrame,
+    condition_predictions: pd.DataFrame,
+) -> None:
+    """Ensure all candidate-panel inputs describe the same frozen panels."""
+    required_manifest = {
+        "panel_id",
+        "n_candidate_rows",
+        "n_candidate_materials",
+        "n_condition_strata",
+    }
+    missing = required_manifest.difference(manifest.columns)
+    if missing:
+        raise RuntimeError(f"Candidate manifest is missing columns: {sorted(missing)}")
+    if manifest["panel_id"].duplicated().any():
+        raise RuntimeError("Candidate manifest contains duplicate panel IDs.")
+    expected_ids = set(manifest["panel_id"].astype(int))
+    expected_rows = manifest.set_index("panel_id")["n_candidate_rows"].astype(int).sort_index()
+
+    required_prediction = {
+        "panel_id",
+        "task_row_id",
+        "condition_key",
+        "material_group",
+        "y_true",
+        "eligible_condition_stratum",
+    }
+    identity_columns = ["panel_id", "task_row_id", "condition_key", "material_group"]
+    identity_sets: dict[str, set[tuple[object, ...]]] = {}
+    truth_by_identity: dict[str, pd.Series] = {}
+    prediction_frames: dict[str, pd.DataFrame] = {}
+
+    for name, frame in [
+        ("full predictions", full_predictions),
+        ("condition-only predictions", condition_predictions),
+    ]:
+        missing_prediction = required_prediction.difference(frame.columns)
+        if missing_prediction:
+            raise RuntimeError(
+                f"{name} is missing prediction identity columns: "
+                f"{sorted(missing_prediction)}"
+            )
+        if "panel_id" not in frame.columns:
+            raise RuntimeError(f"{name} is missing panel_id.")
+        observed_ids = set(frame["panel_id"].astype(int))
+        if observed_ids != expected_ids:
+            raise RuntimeError(
+                f"{name} panel IDs do not match the frozen manifest: "
+                f"expected {sorted(expected_ids)}, observed {sorted(observed_ids)}."
+            )
+        observed_rows = frame.groupby("panel_id").size().sort_index()
+        if not observed_rows.equals(expected_rows):
+            raise RuntimeError(
+                f"{name} row counts do not match the frozen manifest. "
+                f"Expected {expected_rows.to_dict()}, observed {observed_rows.to_dict()}."
+            )
+        if frame.duplicated(identity_columns).any():
+            raise RuntimeError(f"{name} contains duplicate panel/row/condition/material identities.")
+        identities = set(
+            map(tuple, frame[identity_columns].astype(str).itertuples(index=False, name=None))
+        )
+        identity_sets[name] = identities
+        truth_by_identity[name] = (
+            frame.set_index(identity_columns)["y_true"].astype(float).sort_index()
+        )
+        prediction_frames[name] = frame
+
+    if identity_sets["full predictions"] != identity_sets["condition-only predictions"]:
+        raise RuntimeError(
+            "Full and condition-only predictions do not contain the same row/condition/material identities."
+        )
+    if not truth_by_identity["full predictions"].equals(
+        truth_by_identity["condition-only predictions"]
+    ):
+        raise RuntimeError("Full and condition-only predictions disagree on y_true for a shared identity.")
+
+    for name, frame in prediction_frames.items():
+        for panel_id, panel in frame.groupby("panel_id", sort=False):
+            eligible = panel.loc[as_boolean(panel["eligible_condition_stratum"])]
+            expected_panel = manifest.loc[manifest["panel_id"].eq(panel_id)].iloc[0]
+            n_strata = int(eligible["condition_key"].nunique())
+            if n_strata != int(expected_panel["n_condition_strata"]):
+                raise RuntimeError(
+                    f"{name} panel {panel_id} has {n_strata} eligible condition strata; "
+                    f"manifest expects {int(expected_panel['n_condition_strata'])}."
+                )
+            material_counts = eligible.groupby("condition_key")["material_group"].nunique()
+            if not material_counts.eq(int(expected_panel["n_candidate_materials"])).all():
+                raise RuntimeError(
+                    f"{name} panel {panel_id} does not have a complete eligible candidate grid."
+                )
+
+    if "panel_id" not in full_summary.columns:
+        raise RuntimeError("Full-model summary is missing panel_id.")
+    summary_ids = set(full_summary["panel_id"].astype(int))
+    if summary_ids != expected_ids or full_summary["panel_id"].duplicated().any():
+        raise RuntimeError("Full-model summary does not contain exactly one row per manifest panel.")
 
 
 def pairwise_accuracy(observed: np.ndarray, predicted: np.ndarray) -> float:
@@ -468,7 +562,12 @@ def main() -> None:
     parser.add_argument("--full-predictions", type=Path, default=DEFAULT_FULL_PREDICTIONS)
     parser.add_argument("--full-summary", type=Path, default=DEFAULT_FULL_SUMMARY)
     parser.add_argument("--condition-only-predictions", type=Path, default=DEFAULT_CONDITION_ONLY)
-    parser.add_argument("--source-summary", type=Path, default=DEFAULT_SOURCE_SUMMARY)
+    parser.add_argument(
+        "--source-summary",
+        type=Path,
+        default=None,
+        help="Optional same-run study-block summary to merge; omitted by default to prevent version mixing.",
+    )
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--bootstrap-reps", type=int, default=2000)
     parser.add_argument("--permutation-reps", type=int, default=100000)
@@ -487,6 +586,12 @@ def main() -> None:
     full_predictions = pd.read_csv(args.full_predictions)
     full_summary = pd.read_csv(args.full_summary)
     condition_predictions = pd.read_csv(args.condition_only_predictions)
+    validate_panel_inputs(
+        manifest,
+        full_predictions,
+        full_summary,
+        condition_predictions,
+    )
     full_cells = aggregate_cells(full_predictions, prediction_column="y_pred")
     condition_cells = aggregate_cells(
         condition_predictions, prediction_column="y_pred_condition_only"
@@ -611,6 +716,12 @@ def main() -> None:
     panels["minimum_exact_permutation_p"] = panels["n_candidate_materials"].map(
         lambda count: 1.0 / factorial(int(count))
     )
+    panels["median_within_stratum_range_to_response_iqr"] = np.where(
+        panels["observed_response_iqr"].gt(0),
+        panels["median_observed_within_stratum_range"]
+        / panels["observed_response_iqr"],
+        np.nan,
+    )
     panels["reporting_support"] = "higher_support"
     panels.loc[panels["n_condition_strata"].lt(5), "reporting_support"] = (
         "limited_condition_support"
@@ -716,7 +827,9 @@ def main() -> None:
     task_summary = task_summary.merge(
         primary_panel_flags, on=["dataset", "contaminant"], how="left"
     )
-    if args.source_summary.exists():
+    if args.source_summary is not None:
+        if not args.source_summary.exists():
+            raise FileNotFoundError(args.source_summary)
         source_summary = pd.read_csv(args.source_summary)[
             ["dataset", "contaminant", "n_source_studies", "source_balanced_predictive_q2"]
         ].rename(
@@ -856,6 +969,7 @@ def main() -> None:
         f"Pairwise accuracy and material-contrast Q2 intervals resample complete matched-condition strata {args.bootstrap_reps:,} times. They summarize sensitivity to the represented condition set and are not population confidence intervals for future materials.",
         f"The one-sided random-ordering comparison applies one candidate-label permutation consistently across every condition in a panel. All permutations are enumerated when n! is no greater than {args.permutation_reps:,}; otherwise, {args.permutation_reps:,} Monte Carlo permutations are used. Holm and Benjamini-Hochberg adjustments are calculated across the primary panels.",
         "Exact-test resolution depends on candidate count; minimum_exact_permutation_p records the smallest attainable unadjusted P value for each panel.",
+        "Study-block summary columns are included only when an explicit same-run --source-summary path is supplied.",
     ]
     (args.out_dir / "README.md").write_text("\n".join(readme) + "\n", encoding="utf-8")
     print(args.out_dir / "evidence_by_panel.csv")
